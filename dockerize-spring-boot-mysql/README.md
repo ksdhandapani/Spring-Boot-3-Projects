@@ -21,9 +21,25 @@ spring.datasource.password
 
 This means we do not have to provide these manually in the application.properties file, so that the App will be connected to the database.
 
-Run the application using the Docker Compose command 
+#### Run the application using the Docker Compose command 
+
+Docker Compose will build the Spring Boot and MySQL images, create the containers, create the network, and start them all
 
 `MYSQL_DATABASE=sb_mysql_docker_db MYSQL_PASSWORD=Mysql@2025 docker-compose up`
+
+To stop and remove containers and networks
+
+`docker compose down`
+
+To stop and remove everything created by Docker Compose (Including images and volumes)
+
+`docker compose down --rmi all`
+
+#### Build, Start and Stop the services using shell scripts 
+
+`sh build.sh` To build the project
+`sh up.sh` To start the services
+`sh down.sh` To stop the services
 
 #### Pushing the image to Docker Hub
 
