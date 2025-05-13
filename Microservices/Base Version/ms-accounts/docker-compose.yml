@@ -1,0 +1,38 @@
+services:
+  ms-accounts:
+    image: "dhandapaniks/ms-accounts:0.1"
+    container_name: "ms-accounts"
+    ports:
+      - "8080:8080"
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    networks:
+      - "dhandapaniksmsntwrk"
+  ms-loans:
+    image: "dhandapaniks/ms-loans:0.1"
+    container_name: "ms-loans"
+    ports:
+      - "8090:8090"
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    networks:
+      - "dhandapaniksmsntwrk"
+  ms-cards:
+    image: "dhandapaniks/ms-cards:0.1"
+    container_name: "ms-cards"
+    ports:
+      - "9000:9000"
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    networks:
+      - "dhandapaniksmsntwrk"
+
+networks:
+  dhandapaniksmsntwrk:
+    driver: "bridge"  
