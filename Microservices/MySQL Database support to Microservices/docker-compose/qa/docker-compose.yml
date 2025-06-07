@@ -1,0 +1,100 @@
+services:
+  ms-accounts-db:
+    container_name: ms-accounts-db
+    ports:
+      - 3306:3306
+    environment:
+      MYSQL_DATABASE: ms-accounts-db
+    extends:
+      file: common-config.yml
+      service: microservice-db-config
+
+  ms-loans-db:
+    container_name: ms-loans-db
+    ports:
+      - 3307:3306
+    environment:
+      MYSQL_DATABASE: ms-loans-db
+    extends:
+      file: common-config.yml
+      service: microservice-db-config
+
+  ms-cards-db:
+    container_name: ms-cards-db
+    ports:
+      - 3308:3306
+    environment:
+      MYSQL_DATABASE: ms-cards-db
+    extends:
+      file: common-config.yml
+      service: microservice-db-config
+
+  ms-config-server:
+    image: "dhandapaniks/ms-config-server:0.0.2"
+    container_name: "ms-config-server"
+    ports:
+      - "8071:8071"
+    healthcheck:
+      test: "curl --fail --silent localhost:8071/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+      interval: 10s
+      timeout: 5s # In each check, it has to wait for 5 seconds
+      retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+      start_period: 10s # Execute health check command or api only after 10 seconds
+    extends:
+      file: common-config.yml
+      service: microservice-base-config
+
+  ms-accounts:
+    image: "dhandapaniks/ms-accounts:0.0.2"
+    container_name: "ms-accounts"
+    ports:
+      - "8080:8080"
+    depends_on:
+      ms-config-server:
+        condition: service_healthy
+      ms-accounts-db:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_NAME: "ms-accounts"
+      SPRING_DATASOURCE_URL: "jdbc:mysql://ms-accounts-db:3306/ms-accounts-db"
+    extends:
+      file: common-config.yml
+      service: microservice-configserver-config
+
+  ms-loans:
+    image: "dhandapaniks/ms-loans:0.0.2"
+    container_name: "ms-loans"
+    ports:
+      - "8090:8090"
+    depends_on:
+      ms-config-server:
+        condition: service_healthy
+      ms-loans-db:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_NAME: "ms-loans"
+      SPRING_DATASOURCE_URL: "jdbc:mysql://ms-loans-db:3306/ms-loans-db"
+    extends:
+      file: common-config.yml
+      service: microservice-configserver-config
+
+  ms-cards:
+    image: "dhandapaniks/ms-cards:0.0.2"
+    container_name: "ms-cards"
+    ports:
+      - "9000:9000"
+    depends_on:
+      ms-config-server:
+        condition: service_healthy
+      ms-cards-db:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_NAME: "ms-cards"
+      SPRING_DATASOURCE_URL: "jdbc:mysql://ms-cards-db:3306/ms-cards-db"
+    extends:
+      file: common-config.yml
+      service: microservice-configserver-config
+
+networks:
+  dhandapaniks-xyzbank-msntwrk:
+    driver: "bridge"  
