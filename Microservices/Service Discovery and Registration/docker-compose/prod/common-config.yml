@@ -1,0 +1,25 @@
+services:
+  network-deploy-service:
+    networks:
+      - dhandapaniks-xyzbank-msntwrk
+
+  microservice-base-config:
+    extends:
+      service: network-deploy-service
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+
+  microservice-configserver-config:
+    extends:
+      service: microservice-base-config
+    depends_on:
+      ms-config-server:
+        condition: service_healthy
+      ms-eurekaserver:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_CONFIG_IMPORT: configserver:http://ms-config-server:8071/
+      EUREKA_CLIENT_SERVICEURL_DEFAULT_ZONE: http://ms-eurekaserver:8070/eureka/
