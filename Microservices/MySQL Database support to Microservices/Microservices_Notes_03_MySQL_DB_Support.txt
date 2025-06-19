@@ -1,0 +1,297 @@
+MYSQL DATABASE INSIDE MICROSERVICES
+-----------------------------------
+
+1. Remove Spring Cloud Bus and Monitory related changes to avoid resource load
+
+Remove the below from ms-config-server's pom.xml
+
+    <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-bus-amqp</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-config-monitor</artifactId>
+    </dependency>
+
+Remove the following properties from ms-config-server's application.properties
+
+  spring.rabbitmq.host=localhost # It should be the service name, when you run it using docker
+  spring.rabbitmq.port=5672
+  spring.rabbitmq.username=guest
+  spring.rabbitmq.password=guest
+
+Remove the below from ms-accounts's pom.xml
+
+    <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-bus-amqp</artifactId>
+    </dependency>
+
+    Do the same on ms-loans and ms-cards
+
+Remove the following properties from ms-accounts's application properties 
+
+  # RabbitMQ Connection Detail
+  spring.rabbitmq.host=localhost
+  spring.rabbitmq.port=5672
+  spring.rabbitmq.username=guest
+  spring.rabbitmq.password=guest
+
+  Do the same on ms-loans and ms-cards
+
+2. Creating a database using Docker (Manual approach)
+
+docker run -p 3306:3306 --name accounts-ms-db -e MYSQL_ROOT_PASSWORD=root -e MYSQL_DATABASE=accounts-ms-db -d mysql
+
+mysql is the image name
+accounts-ms-db is a container name
+
+docker run -p 3307:3306 --name loans-ms-db -e MYSQL_ROOT_PASSWORD=root -e MYSQL_DATABASE=loans-ms-db -d mysql
+
+docker run -p 3308:3306 --name cards-ms-db -e MYSQL_ROOT_PASSWORD=root -e MYSQL_DATABASE=cards-ms-db -d mysql
+
+2.1. Update services to replace H2 DB Configuration with MySQL DB
+
+Remove h2 dependency from pom.xml of ms-accounts, ms-cards, and ms-loans
+
+Add the mysql-connector-j dependency to pom.xml of ms-accounts, ms-cards, and ms-loans
+
+  <dependency>
+    <groupId>com.mysql</groupId>
+    <artifactId>mysql-connector-j</artifactId>
+    <scope>runtime</scope>
+  </dependency>
+
+Update application.properties of ms-accounts, ms-cards, and ms-loans
+
+  # Datasource properties
+  spring.datasource.url=jdbc:mysql://localhost:3306/accounts-ms-db
+  spring.datasource.username=root
+  spring.datasource.password=root
+
+  # Always executes the SQL script we have in src/main/resources
+  spring.sql.init.mode=always
+
+  spring.jpa.show-sql=true
+
+3. Update docker-compose.yml file to create and use MySQL Database
+
+3.1 Update the image version to 0.0.2 in all services (ms-accounts, ms-cards, ms-loans, and ms-config-server)
+
+    <build>
+      <plugins>
+        <plugin>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-maven-plugin</artifactId>
+        </plugin>
+        <plugin>
+          <groupId>com.google.cloud.tools</groupId>
+          <artifactId>jib-maven-plugin</artifactId>
+          <version>3.4.2</version>
+          <configuration>
+            <to>
+              <image>dhandapaniks/${project.artifactId}:0.0.2</image>
+            </to>
+          </configuration>
+        </plugin>
+      </plugins>
+    </build>
+
+3.2 Build images for the services using the following commands
+
+PS D:\STS_WS\v2-spring-cloud-config-dockerizing\ms-accounts> mvn compile jib:dockerBuild
+
+PS D:\STS_WS\v2-spring-cloud-config-dockerizing\ms-cards> mvn compile jib:dockerBuild
+
+PS D:\STS_WS\v2-spring-cloud-config-dockerizing\ms-loans> mvn compile jib:dockerBuild
+
+PS D:\STS_WS\v2-spring-cloud-config-dockerizing\ms-config-server> mvn compile jib:dockerBuild
+
+3.3 Update default/docker-compose.yml
+
+Remove the below rabbitmq related configuration
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    hostname: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: rabbitmq-diagnostics check_port_connectivity # From rabbitmq official documentation
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    extends:
+      file: common-config.yml
+      service: network-deploy-service
+
+Create databases for ms-accounts, ms-cards, and ms-loans
+
+Updated common-config.yml
+
+  services:
+    network-deploy-service:
+      networks:
+        - dhandapaniks-xyzbank-msntwrk
+
+    microservice-db-config:
+      extends:
+        service: network-deploy-service
+      image: mysql
+      healthcheck:
+        test: ["CMD","mysqladmin","ping","-h","localhost"]
+        timeout: 10s
+        retries: 10
+        interval: 10s
+        start_period: 10s
+      environment:
+        MYSQL_ROOT_PASSWORD: root
+
+    microservice-base-config:
+      extends:
+        service: network-deploy-service
+      deploy:
+        resources:
+          limits:
+            memory: 700m
+
+    microservice-configserver-config:
+      extends:
+        service: microservice-base-config
+      environment:
+        SPRING_PROFILES_ACTIVE: default
+        SPRING_CONFIG_IMPORT: configserver:http://ms-config-server:8071/
+        SPRING_DATASOURCE_USERNAME: root
+        SPRING_DATASOURCE_PASSWORD: root
+
+Updated docker-compose.yml
+
+  services:
+    ms-accounts-db:
+      container_name: ms-accounts-db
+      ports:
+        - 3306:3306
+      environment:
+        MYSQL_DATABASE: ms-accounts-db
+      extends:
+        file: common-config.yml
+        service: microservice-db-config
+
+    ms-loans-db:
+      container_name: ms-loans-db
+      ports:
+        - 3307:3306
+      environment:
+        MYSQL_DATABASE: ms-loans-db
+      extends:
+        file: common-config.yml
+        service: microservice-db-config
+
+    ms-cards-db:
+      container_name: ms-cards-db
+      ports:
+        - 3308:3306
+      environment:
+        MYSQL_DATABASE: ms-cards-db
+      extends:
+        file: common-config.yml
+        service: microservice-db-config
+
+    ms-config-server:
+      image: "dhandapaniks/ms-config-server:0.0.2"
+      container_name: "ms-config-server"
+      ports:
+        - "8071:8071"
+      healthcheck:
+        test: "curl --fail --silent localhost:8071/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+        interval: 10s
+        timeout: 5s # In each check, it has to wait for 5 seconds
+        retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+        start_period: 10s # Execute health check command or api only after 10 seconds
+      extends:
+        file: common-config.yml
+        service: microservice-base-config
+
+    ms-accounts:
+      image: "dhandapaniks/ms-accounts:0.0.2"
+      container_name: "ms-accounts"
+      ports:
+        - "8080:8080"
+      depends_on:
+        ms-config-server:
+          condition: service_healthy
+        ms-accounts-db:
+          condition: service_healthy
+      environment:
+        SPRING_APPLICATION_NAME: "ms-accounts"
+        SPRING_DATASOURCE_URL: "jdbc:mysql://ms-accounts-db:3306/ms-accounts-db"
+      extends:
+        file: common-config.yml
+        service: microservice-configserver-config
+
+    ms-loans:
+      image: "dhandapaniks/ms-loans:0.0.2"
+      container_name: "ms-loans"
+      ports:
+        - "8090:8090"
+      depends_on:
+        ms-config-server:
+          condition: service_healthy
+        ms-loans-db:
+          condition: service_healthy
+      environment:
+        SPRING_APPLICATION_NAME: "ms-loans"
+        SPRING_DATASOURCE_URL: "jdbc:mysql://ms-loans-db:3306/ms-loans-db"
+      extends:
+        file: common-config.yml
+        service: microservice-configserver-config
+
+    ms-cards:
+      image: "dhandapaniks/ms-cards:0.0.2"
+      container_name: "ms-cards"
+      ports:
+        - "9000:9000"
+      depends_on:
+        ms-config-server:
+          condition: service_healthy
+        ms-cards-db:
+          condition: service_healthy
+      environment:
+        SPRING_APPLICATION_NAME: "ms-cards"
+        SPRING_DATASOURCE_URL: "jdbc:mysql://ms-cards-db:3306/ms-cards-db"
+      extends:
+        file: common-config.yml
+        service: microservice-configserver-config
+
+  networks:
+    dhandapaniks-xyzbank-msntwrk:
+      driver: "bridge"  
+
+3.4 Start the service using "docker compose up -d" command
+
+PS D:\STS_WS\v2-spring-cloud-config-dockerizing\docker-compose\default> docker compose up -d
+[+] Running 8/8
+ ✔ Network default_dhandapaniks-xyzbank-msntwrk  Created                                                                        0.1s
+ ✔ Container ms-accounts-db                      Healthy                                                                       21.6s
+ ✔ Container ms-cards-db                         Healthy                                                                       21.6s
+ ✔ Container ms-config-server                    Healthy                                                                       22.1s
+ ✔ Container ms-loans-db                         Healthy                                                                       21.6s
+ ✔ Container ms-loans                            Started                                                                       22.5s
+ ✔ Container ms-accounts                         Started                                                                       22.5s
+ ✔ Container ms-cards                            Started                                                                       22.3s
+
+Stop and remove the services using "docker compose down"
+
+3.5 Commands related to docker network
+
+To list available networks: docker network ls
+
+PS D:\STS_WS\v2-spring-cloud-config-dockerizing\docker-compose\prod> docker network ls
+NETWORK ID     NAME                                DRIVER    SCOPE
+53805f340109   bridge                              bridge    local
+fc0e4182ea3b   host                                host      local
+01199f0fe458   none                                null      local
+2729658ead8a   prod_dhandapaniks-xyzbank-msntwrk   bridge    local
