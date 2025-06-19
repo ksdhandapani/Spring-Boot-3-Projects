@@ -14,6 +14,9 @@ services:
     extends:
       file: common-config.yml
       service: microservice-base-config
+    environment:
+      SPRING_APPLICATION_NAME: "ms-config-server"
+
       
   ms-eurekaserver:
     image: "dhandapaniks/ms-eurekaserver:0.0.3"
@@ -56,6 +59,22 @@ services:
     container_name: "ms-loans"
     ports:
       - "8090:8090"
+    depends_on:
+      ms-config-server:
+        condition: service_healthy
+      ms-eurekaserver:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_NAME: "ms-loans"
+    extends:
+      file: common-config.yml
+      service: microservice-eurekaserver-config
+      
+  ms-loans-2:
+    image: "dhandapaniks/ms-loans:0.0.3"
+    container_name: "ms-loans-2"
+    ports:
+      - "8091:8090"
     depends_on:
       ms-config-server:
         condition: service_healthy

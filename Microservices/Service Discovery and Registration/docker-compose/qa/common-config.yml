@@ -14,12 +14,12 @@ services:
   microservice-configserver-config:
     extends:
       service: microservice-base-config
-    depends_on:
-      ms-config-server:
-        condition: service_healthy
-      ms-eurekaserver:
-        condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: qa
       SPRING_CONFIG_IMPORT: configserver:http://ms-config-server:8071/
-      EUREKA_CLIENT_SERVICEURL_DEFAULT_ZONE: http://ms-eurekaserver:8070/eureka/
+
+  microservice-eurekaserver-config:
+    extends:
+      service: microservice-configserver-config
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://ms-eurekaserver:8070/eureka/
