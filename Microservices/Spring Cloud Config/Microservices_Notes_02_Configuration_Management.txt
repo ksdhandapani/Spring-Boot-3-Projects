@@ -1,0 +1,1036 @@
+SPRING CLOUD CONFIG
+-------------------
+
+- Spring Clould Config provides server and client-side support for externalized configuration in a distributed system. 
+- With Config Server, we have a central place to manage external properties for applications across all environments.
+- A centralized configuration server with Spring Cloud Config can overcome all the drawbacks that we mentioned previously.
+
+Centralized configuration revolves around two core elements:
+
+1. Data Store: A data store designed to handle configuration data, ensuring durability, version management, and potentially access control.
+2. Server: A server that oversees the configuration data within the data store, facilitating its management and distribution to mulitple applications.
+
+Data Flow:
+
+Microservices (Config Clients) ---> Spring Cloud Config Server <--- Central repositories (Database, GitHub, File System or Classpath)
+
+Microservices act as Config clients and load configurations during startup by connecting to Configuration service.
+Spring Cloud Config Server loads all the configurations by connecting to central repository
+Central repositories where properties get stored
+
+-- Implementation of Config Server
+
+Add "spring-cloud-config-server" depdency from "org.springframework.cloud" to pom.xml
+
+  <dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-config-server</artifactId>
+  </dependency>
+
+Annotate the main class with @EnableConfigServer
+
+  @SpringBootApplication
+  @EnableConfigServer
+  public class MsConfigServerApplication {
+
+    public static void main(String[] args) {
+      SpringApplication.run(MsConfigServerApplication.class, args);
+    }
+
+  }
+
+1. Reading configuration from the classpath of the Configuration Server
+
+Add configuration files to the classpath
+
+Configuration file name format:
+
+The file names for different environments should match the file name given in the client application
+Client application name: ms-accounts (Mentioned in application.properties of ms-accounts service)
+Include environment name at the end of the file separted by hyphen (-)
+
+application.properties in ms-accounts service
+
+  spring.application.name=ms-accounts
+
+application.properties in ms-loans service
+
+  spring.application.name=ms-loans
+
+application.properties in ms-cards service
+
+  spring.application.name=ms-cards
+
+Example:
+
+src/main/resources/config/ms-accounts.properties
+src/main/resources/config/ms-accounts-qa.properties
+src/main/resources/config/ms-accounts-prod.properties
+
+Define the properties location in Config Server Application's application.properties file
+
+# Want to activate the native profile of Spring Cloud Config Server
+spring.profiles.active=native
+# The location where our properties are stored
+spring.cloud.config.server.native.search-locations=classpath:/config
+
+Run the applicatoin and access the properties using the following URLs:
+
+http://localhost:8071/ms-accounts/qa
+http://localhost:8071/ms-accounts/prod
+http://localhost:8071/ms-accounts/default
+http://localhost:8071/ms-loans/qa
+http://localhost:8071/ms-loans/prod
+http://localhost:8071/ms-loans/default
+http://localhost:8071/ms-cards/qa
+http://localhost:8071/ms-cards/prod
+http://localhost:8071/ms-cards/default
+
+1.1 Update Client servicers to read configuration from Config Server
+
+Update pom.xml file
+
+Add Spring Cloud version to <properties> </properties>
+
+  <spring-cloud.version>2023.0.5</spring-cloud.version>
+
+Include "spring-cloud-config-client" dependency from "org.springframework.cloud" to <dependencies> </dependencies>
+
+  <dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-config-client</artifactId>
+  </dependency>
+
+Include "spring-cloud-dependencies" dependency from "org.springframework.cloud" between <dependencyManagement> </dependencyManagement> 
+  
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-dependencies</artifactId>
+        <version>${spring-cloud.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+
+Update application.properties of client service
+
+# Default profile that I want to use
+spring.profiles.active=prod
+# Location of / Link to access config server
+spring.config.import=optional:configserver:http://localhost:8071/
+
+Usage of optional: If the client application is unable to connect with the config server for whatever reasons, it can still continue to start the client application. The value "optional" can be removed if needed.
+
+2. Reading configuration from a file system
+
+Using the File System approach, you will maintain all the required properties inside the server location where your Microservice is deployed.
+This approach has an advantage if your server admin wants to enforce security restrictions, such as limiting who can see the content of the folder, except your config server service. 
+
+- Move configuration files from your classpath to a server (a location where your config server application is deployed)
+
+Ex: I have the following files under the location "C:/Users/sudha/Documents/Microservices_Configuration_Files/"
+
+C:/Users/sudha/Documents/Microservices_Configuration_Files/ms-accounts.properties
+C:/Users/sudha/Documents/Microservices_Configuration_Files/ms-accounts-qa.properties
+C:/Users/sudha/Documents/Microservices_Configuration_Files/ms-accounts-prod.properties
+
+C:/Users/sudha/Documents/Microservices_Configuration_Files/ms-loans.properties
+C:/Users/sudha/Documents/Microservices_Configuration_Files/ms-loans-qa.properties
+C:/Users/sudha/Documents/Microservices_Configuration_Files/ms-loans-prod.properties
+
+C:/Users/sudha/Documents/Microservices_Configuration_Files/ms-cards.properties
+C:/Users/sudha/Documents/Microservices_Configuration_Files/ms-cards-qa.properties
+C:/Users/sudha/Documents/Microservices_Configuration_Files/ms-cards-prod.properties
+
+- Update application.properties of Config Server
+
+# Want to activate the native profile of Spring Cloud Config Server
+spring.profiles.active=native
+
+# The location where our properties are stored - Reading configuration from a File System
+spring.cloud.config.server.native.search-locations=file:///C://Users//sudha//Documents//Microservices_Configuration_Files
+
+- Start the application and verify the changes by calling the Config Server APIs
+
+Example: http://localhost:8071/ms-accounts/qa
+
+{
+  "name": "ms-accounts",
+  "profiles": [
+    "qa"
+  ],
+  "label": null,
+  "version": null,
+  "state": null,
+  "propertySources": [
+    {
+      "name": "file:/C:/Users/sudha/Documents/Microservices_Configuration_Files/ms-accounts-qa.properties",
+      "source": {
+        "build.version": "2.0",
+        "accounts.message": "Welcome to Accounts related QA APIs",
+        "accounts.contactDetails.name": "Dhandapani Sudhakar - QA Lead",
+        "accounts.contactDetails.email": "ksdhandapani96_qa@gmail.com",
+        "accounts.oncallsupport": "9876543210,897654312"
+      }
+    },
+    {
+      "name": "file:/C:/Users/sudha/Documents/Microservices_Configuration_Files/ms-accounts.properties",
+      "source": {
+        "build.version": "3.0",
+        "accounts.message": "Welcome to Accounts related local APIs",
+        "accounts.contactDetails.name": "Dhandapani Sudhakar",
+        "accounts.contactDetails.email": "ksdhandapani96@gmail.com",
+        "accounts.oncallsupport": "9876543210,897654312"
+      }
+    }
+  ]
+}
+
+In the API response, we can see that the name of the file is mentioned, containing the location of the file
+
+3. Reading configuration from a GitHub repository (Recommended approach)
+
+- GitHub repository (Public repository) where we have the configuration files: https://github.com/ksdhandapani/microservices-config-server-configuration-source
+
+- Update application.properties of config server application
+
+# Want to activate the native profile of Spring Cloud Config Server - This will work only for reading config from git
+spring.profiles.active=git
+
+# Repository URL
+spring.cloud.config.server.git.uri=https://github.com/ksdhandapani/microservices-config-server-configuration-source.git
+
+# Default Branch
+spring.cloud.config.server.git.default-label=main
+
+# Config server will wait only for 5 seconds, if it is unable to connect within 5 seconds, it will throw an error
+spring.cloud.config.server.git.timeout=5
+
+# Clone the repository during the start up of config server. If it is false, the cloning of the repo will happen only when the very first request comes to your config server 
+spring.cloud.config.server.git.clone-on-start=true
+
+# To get latest changes always (During every restart)
+spring.cloud.config.server.git.force-pull=true
+
+- Start the application and verify the changes by calling the Config Server APIs
+
+Example: http://localhost:8071/ms-accounts/qa
+
+{
+  "name": "ms-accounts",
+  "profiles": [
+    "qa"
+  ],
+  "label": null,
+  "version": "189d93a9a227077906a7de15c063a3d40c9f8506",
+  "state": null,
+  "propertySources": [
+    {
+      "name": "https://github.com/ksdhandapani/microservices-config-server-configuration-source.git/ms-accounts-qa.properties",
+      "source": {
+        "build.version": "2.0",
+        "accounts.message": "Welcome to Accounts related QA APIs",
+        "accounts.contactDetails.name": "Dhandapani Sudhakar - QA Lead",
+        "accounts.contactDetails.email": "ksdhandapani96_qa@gmail.com",
+        "accounts.oncallsupport": "9876543210,897654312"
+      }
+    },
+    {
+      "name": "https://github.com/ksdhandapani/microservices-config-server-configuration-source.git/ms-accounts.properties",
+      "source": {
+        "build.version": "3.0",
+        "accounts.message": "Welcome to Accounts related local APIs",
+        "accounts.contactDetails.name": "Dhandapani Sudhakar",
+        "accounts.contactDetails.email": "ksdhandapani96@gmail.com",
+        "accounts.oncallsupport": "9876543210,897654312"
+      }
+    }
+  ]
+}
+
+In the API response, we can see that the name of the file is mentioned, containing the location of the file
+
+3.1. Encryption and Decryption of properties inside Config Server
+
+3.1.1. Update application.properties of config server and enable APIs for encryption and decryption
+
+Store property values in GitHub in encrypted format. It is always advisable to use encrytpted values for sensitive information
+
+Add the following entry to application.properties
+
+encrypt.key=A74FCYFA97ADFADJJK45CH48CHFAR
+
+Give a complex value for the key, this key will be used by the configuration server to encrypt and decrypt the properties
+
+Once we have the entry, APIs for encryption and decryption will be exposed by our config server application
+
+API to encrypt: POST - http://localhost:8071/encrypt
+
+Method body: plain-text-value-that-you-want-to-encrypt
+
+curl --location 'http://localhost:8071/encrypt' \
+--header 'Content-Type: application/json' \
+--data-raw 'ksdhandapani96@gmail.com'
+
+Response: 51a03bb58cabb4f4e80612e922ff887022d089dd45db0e8415f808189c4e630f91ca07502fa24d64687d5e27c1503ff3
+
+API to decrypt: POST - http://localhost:8071/decrypt
+
+Method body: encrypted-value-that-you-want-to-decrypt
+
+curl --location 'http://localhost:8071/decrypt' \
+--header 'Content-Type: application/json' \
+--data '51a03bb58cabb4f4e80612e922ff887022d089dd45db0e8415f808189c4e630f91ca07502fa24d64687d5e27c1503ff3'
+
+Response: ksdhandapani96@gmail.com
+
+3.1.2. Update properties in GitHub that requires encryption
+
+Identify the properties that requires encryption, in our case, we can encrypt the email addresses
+
+Generate encrypted value and update it in repo
+
+** Include {cipher} in front of encrypted values so that the config server understands that it is encrypted and will return decrypted values to the client
+
+Example: Content of ms-accounts-prod.properties
+
+https://github.com/ksdhandapani/microservices-config-server-configuration-source/blob/main/ms-accounts-prod.properties
+
+build.version=1.0
+
+accounts.message=Welcome to Accounts related PROD APIs
+accounts.contactDetails.name=Dhandapani Sudhakar - PROD Lead
+accounts.contactDetails.email={cipher}27a58f56b77e7dd2fdb122a6ea841186fb20ae5861f11206a2dbf88c175b02c78f52c4d73ef0724221a8c3286959d183
+accounts.oncallsupport=9876543210,897654312
+
+3.1.3. Start the application and verify the changes by calling the Config Server APIs
+
+Example: http://localhost:8071/ms-accounts/prod
+
+{
+  "name": "ms-accounts",
+  "profiles": [
+    "prod"
+  ],
+  "label": null,
+  "version": "e368ac669cff104ec0c3063d4b711ce5f7bb9479",
+  "state": null,
+  "propertySources": [
+    {
+      "name": "https://github.com/ksdhandapani/microservices-config-server-configuration-source.git/ms-accounts-prod.properties",
+      "source": {
+        "build.version": "1.0",
+        "accounts.message": "Welcome to Accounts related PROD APIs",
+        "accounts.contactDetails.name": "Dhandapani Sudhakar - PROD Lead",
+        "accounts.oncallsupport": "9876543210,897654312",
+        "accounts.contactDetails.email": "ksdhandapani96_prod@gmail.com"
+      }
+    },
+    {
+      "name": "https://github.com/ksdhandapani/microservices-config-server-configuration-source.git/ms-accounts.properties",
+      "source": {
+        "build.version": "3.0",
+        "accounts.message": "Welcome to Accounts related local APIs",
+        "accounts.contactDetails.name": "Dhandapani Sudhakar",
+        "accounts.oncallsupport": "9876543210,897654312",
+        "accounts.contactDetails.email": "ksdhandapani96@gmail.com"
+      }
+    }
+  ]
+}
+
+4. Refersh configurations at runtime using refresh actuator path
+
+- Make sure you have spring-boot-starter-actuator dependency added to pom.xml file
+
+  <dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-actuator</artifactId>
+  </dependency>
+
+- Update the DTOs which are used to hold the property details
+
+Whenever we are using a record class, once the object of AccountContactInfoDto is created during the start up, we cannot change the property values at runtime by invoking the setter method becasue whenever we use record type, all our fields going to be final and once the object is created with the help of constructor, then there is no way to change the values inside the fields, hence we need to switch all our DTOs to normal class instead of record.
+
+From
+
+@ConfigurationProperties(prefix="accounts")
+public record AccountContactInfoDto(String message, Map<String, String> contactDetails, List<String> onCallSupport) {
+
+}
+
+To
+
+@ConfigurationProperties(prefix="accounts")
+@Getter
+@Setter
+public class AccountContactInfoDto {
+
+  private String message;
+  private Map<String, String> contactDetails;
+  private List<String> onCallSupport;
+  
+}
+
+From 
+
+@ConfigurationProperties(prefix="cards")
+public record CardContactInfoDto(String message, Map<String, String> contactDetails, List<String> onCallSupport) {
+
+}
+
+To 
+
+@ConfigurationProperties(prefix="cards")
+@Getter
+@Setter
+public class CardContactInfoDto {
+
+  private String message;
+  private Map<String, String> contactDetails;
+  private List<String> onCallSupport;
+  
+}
+
+From 
+
+@ConfigurationProperties(prefix = "loans")
+public record LoanContactInfoDto(String message, Map<String, String> contactDetails, List<String> onCallSupport) {
+
+}
+
+To 
+
+@ConfigurationProperties(prefix = "loans")
+@Getter
+@Setter
+public class LoanContactInfoDto {
+
+  private String message;
+  private Map<String, String> contactDetails;
+  private List<String> onCallSupport;
+
+}
+
+- In Client services, enable management endpoints provided by Spring Boot Actuator
+
+Update the application.properties of ms-accounts, ms-cards, and ms-loans services
+
+# Telling Spring Boot Actuator to enable and expose all management endpoints
+management.endpoints.web.exposure.include=*
+
+- Make changes in the properties we have in GitHub
+
+https://github.com/ksdhandapani/microservices-config-server-configuration-source/blob/main/ms-accounts-prod.properties
+
+build.version=1.0
+
+accounts.message=Welcome to Accounts related PRODUCTION APIs
+accounts.contactDetails.name=Dhandapani Sudhakar - PRODUCTION Lead
+accounts.contactDetails.email={cipher}27a58f56b77e7dd2fdb122a6ea841186fb20ae5861f11206a2dbf88c175b02c78f52c4d73ef0724221a8c3286959d183
+accounts.oncallsupport=9876543210,897654312
+
+- Verify the changes in Config Server
+
+Our config server will always return updated data as we have the configuration to pull latest data
+
+# To get latest changes always (During every restart)
+spring.cloud.config.server.git.force-pull=true
+
+- Invoke the refresh actuator endpoints of Client Services (ms-accounts, ms-cards, and ms-loans)
+
+To see all the available actuator endpoints
+
+http://localhost:8080/actuator
+http://localhost:8090/actuator
+http://localhost:9000/actuator
+
+(ms-accounts) POST: http://localhost:8080/actuator/refresh - It will return the key names of the values that have been changed
+
+[
+    "config.client.version",
+    "accounts.message",
+    "accounts.contactDetails.name"
+]
+
+(ms-cards) POST: http://localhost:8090/actuator/refresh - It will return the key names of the values that have been changed
+
+[
+    "config.client.version",
+    "accounts.message",
+    "accounts.contactDetails.name"
+]
+
+(ms-loans) POST: http://localhost:9000/actuator/refresh - It will return the key names of the values that have been changed
+
+[
+    "config.client.version",
+    "accounts.message",
+    "accounts.contactDetails.name"
+]
+
+- Verify the changes on client services
+
+Output before refresh using actuator
+
+http://localhost:8080/api/accounts/contact-info
+
+{
+    "message": "Welcome to Accounts related PROD APIs",
+    "contactDetails": {
+        "name": "Dhandapani Sudhakar - PROD Lead",
+        "email": "ksdhandapani96_prod@gmail.com"
+    },
+    "onCallSupport": [
+        "9876543210",
+        "897654312"
+    ]
+}
+
+Output after refresh using actuator
+
+http://localhost:8080/api/accounts/contact-info
+
+{
+    "message": "Welcome to Accounts related PRODUCTION APIs",
+    "contactDetails": {
+        "name": "Dhandapani Sudhakar - PRODUCTION Lead",
+        "email": "ksdhandapani96_prod@gmail.com"
+    },
+    "onCallSupport": [
+        "9876543210",
+        "897654312"
+    ]
+}
+
+- Drawback of refreshing configurations at runtime using the "/refresh" path
+
+We invoked the refresh mechanism on the Accounts Service, and it worked fine since it was just one application with one instance. How about in production, where there may be multiple services? 
+
+If a project has many microservices, the team may prefer an automated and efficient method for refreshing configuration instead of manually triggering each application instance. 
+
+
+5. Refreshing configuration at runtime using Spring Cloud Bus
+
+We have set up our microservices with a config server. However, the problem we are facing is that we have to invoke the refresh API for each microservice instance whenever we try to refresh the configurations at runtime without restarting.
+
+To overcome this issue, we need to use a new project inside the Spring Cloud, which is Spring Cloud Bus. 
+
+Spring Cloud Bus links all nodes of the distributed system with a lightweight message broker, which can be used to broadcast the state changes (e.g. configuration changes or other management instructions).
+
+Whenever we use Spring Cloud Bus, behind the scenes, this Spring Cloud Bus is going to interlink all your microservices instances with a lightweight message broker like Rabbitmq or Kafka. 
+
+With this, the advantage is that you need to invoke a bus refresh API path available against your actuator only once for one of the instances. If there are 500 instances running in your production environment, you do not have to invoke the actuator refresh API for all 500 instances. Instead, you can simply invoke the bus refresh API for any of the instances in this total of 500 instances; then the Spring Cloud Bus will take care of communicating the changes that happened on the Spring Cloud Config Server to all other nodes or instances connected to the same message broker, like Rabbitmq.
+
+5.1. Install and set up RabbitMQ via Docker
+
+# latest RabbitMQ 4.x
+docker run -it --rm --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:4-management
+
+The command "docker run" is used to start and run the containers
+The "--rm" flag is used to tell the Docker Daemon to clean up the container and remove the file system after the container exits
+The flag "-t or --tty" tells Docker to allocate a virtual terminal session within the container; this is commonly used with the "-i or --interactive" option, which keeps STDIN open even if running in detached mode.
+
+The above command will install 2 components
+
+One is a management component that is responsible for managing your RabbitMQ and providing the UI to RabbitMQ.
+The second component is a core component that is going to handle all the message queue-related functionality.
+
+5.2 Add spring-cloud-starter-bus-amqp to pom.xml of Client Services (ms-accounts, ms-cards, and ms-loans) and Config Server (ms-config-server)
+
+With this, we are trying to set up both Spring Cloud Starter Bus and a message queue with RabbitMQ integration.
+
+  <dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-bus-amqp</artifactId>
+  </dependency>
+
+5.3 Enable the Actuator API path "actuator/busrefresh" inside all our Microservices 
+
+Since we have already given an asterisk(*) for the following property inside the applications.properties file of all our microservices, it will enable all actuator endpoints by default
+
+  # Telling Spring Boot Actuator to enable and expose all management endpoints
+  management.endpoints.web.exposure.include=*
+
+5.4 Provide connection details of RabbitMQ inside individual Microservices
+
+Add the following properties to the application.properties of individual Microservices
+
+# RabbitMQ Connection Detail
+spring.rabbitmq.host=localhost
+spring.rabbitmq.port=5672
+spring.rabbitmq.username=guest
+spring.rabbitmq.password=guest
+
+5.5 Make changes to the source properties file in GitHub Repositories and verify the changes on the Config Server
+
+- Update properties in GitHub
+
+In GitHub, ms-accounts-prod.properties - Before 
+
+build.version=1.0
+
+accounts.message=Welcome to Accounts related PRODUCTION APIs
+accounts.contactDetails.name=Dhandapani Sudhakar - PRODUCTION Lead
+accounts.contactDetails.email={cipher}27a58f56b77e7dd2fdb122a6ea841186fb20ae5861f11206a2dbf88c175b02c78f52c4d73ef0724221a8c3286959d183
+accounts.oncallsupport=9876543210,897654312
+
+In GitHub, ms-accounts-prod.properties - After
+
+build.version=1.0
+
+accounts.message=Welcome to Accounts related PROD APIs
+accounts.contactDetails.name=Dhandapani Sudhakar - PROD Lead
+accounts.contactDetails.email={cipher}27a58f56b77e7dd2fdb122a6ea841186fb20ae5861f11206a2dbf88c175b02c78f52c4d73ef0724221a8c3286959d183
+accounts.oncallsupport=9876543210,897654312
+
+We have applied the same changes to ms-cards-prod.properties and ms-loans-prod.properties
+
+- Verify changes on the Config Server
+
+The config server has received the updates without an application restart 
+
+http://localhost:8071/ms-accounts/prod
+
+{
+  "name": "ms-accounts",
+  "profiles": [
+    "prod"
+  ],
+  "label": null,
+  "version": "92ed60aaf84494807896a9c7c5e51556351691e1",
+  "state": null,
+  "propertySources": [
+    {
+      "name": "https://github.com/ksdhandapani/microservices-config-server-configuration-source.git/ms-accounts-prod.properties",
+      "source": {
+        "build.version": "1.0",
+        "accounts.message": "Welcome to Accounts related PROD APIs",
+        "accounts.contactDetails.name": "Dhandapani Sudhakar - PROD Lead",
+        "accounts.oncallsupport": "9876543210,897654312",
+        "accounts.contactDetails.email": "ksdhandapani96_prod@gmail.com"
+      }
+    },
+    {
+      "name": "https://github.com/ksdhandapani/microservices-config-server-configuration-source.git/ms-accounts.properties",
+      "source": {
+        "build.version": "3.0",
+        "accounts.message": "Welcome to Accounts related local APIs",
+        "accounts.contactDetails.name": "Dhandapani Sudhakar",
+        "accounts.oncallsupport": "9876543210,897654312",
+        "accounts.contactDetails.email": "ksdhandapani96@gmail.com"
+      }
+    }
+  ]
+}
+
+5.6 Invoke the actuator/busrefresh endpoint on any one of the Microservices and verify if the changes are applied to other microservices
+
+- Invoking the actuator/busrefresh endpoint on Accounts Microservices 
+
+curl --location --request POST 'http://localhost:8080/actuator/busrefresh'
+
+It will return a 204 success response
+
+Behind the scenes, since the Spring Cloud Bus has detected a change happened on the config server version, it will communicate the same to all the microservices instances that are registered with the RabbitMQ. Since the ms-loans and ms-cards microservices are also registered with the RabbitMQ, the change might have been communicated to them, and they might have refreshed the properties without the restart of the applications and without invoking these bus refresh or refresh endpoints. 
+
+Flow: 
+
+User (Push new configuration data into Config repo) --->  GitHub ---> Config Server (Config Servier will load the latest configuration data) ---> User (Invokes /actuator/busrefresh on any of the microservice instance, that triggers a config change event and initiate refresh on all the subscribed nodes) ---> Individual Microservices (ms-accounts, ms-cards, and ms-loans)
+
+Drawback: Though this approach reduce manual work to a great extent, but still there is a single manual step involved which is invoking the /actuator/busrefreh on any of the microservice instance. 
+
+Summary:
+
+Spring Cloud Bus facilitates seamless communication between all connected application instances by establishing a convenient event broadcasting channel. It offers an implementation for AMQP brokers, such as RabbitMQ and Kafka, enabling efficient communication across the application ecosystem.
+
+Below are the steps to follow:
+
+S 1. Add actuator dependency in the Config Server and Client services: Add Spring Boot Actuator dependency inside pom.xml of the individual microservices, like ms-accounts, ms-cards, and ms-loans, to expose /busrefresh endpoint.
+
+S 2. Enable /busrefresh API: The Spring Boot Actuator Library provides a configuration endpoint called "/actuator/busrefresh" that can trigger a refresh event. By default, this endpoint is not exposed, so you need to explicitly enable it in the application.properties file using the eblow configuration
+
+management.endpoints.web.exposure.include=busrefresh
+
+S 3. Add Spring Cloud Bus Dependency in Config Server and Client Services: Add Spring Cloud Bus dependency (spring-cloud-starter-bus-amqp) inside the pom.xml of the individual microservices and config server.
+
+S 4. Set up a RabbitMQ: Using Docker, set up RabbitMQ service. If the service is not started with default values, then configure the rabbitmq connection details in the application.properties file of all the individual microservices and the config server.
+
+6. Refresh configurations at runtime using Spring Cloud Bus and Spring Cloud Config Monitor
+
+6.1 Add "spring-cloud-config-monitor" dependency to Config Server
+
+When we add this dependency to Config Server, it is going to expose a new API path with the name "/monitor" (It is not an actuator endpoint) 
+
+  <dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-config-monitor</artifactId>
+  </dependency>
+
+6.2 Create a Webhook in GitHub
+
+Using this /monitor API path available inside the Spring Cloud Config Server, we can create a Webhook inside the GitHub Repository saying that whenever a change happened inside my GitHub repository, like a new property is added, please invoke the monitor API path. 
+
+As soon as this monitor API path receives a webhok request from the GitHub repository, behind the scenes, it is going to invoke the refresh event with the help of Spring Cloud Bus and RabbitMQ.
+
+- Go to your GitHub repository and click on Settings, click on WebHooks, Add Webhook
+- In Add Webhook page, give payload URL as "http://localhost:8071/monitor" (/monitor path on Config Server)
+
+We cannot give localhost as a host, because in a real time in any PROD environment, we will have a public ip or host name which can be used
+
+We are going to use an intermediate tool for using WebHook (https://hookdeck.com/) https://console.hookdeck.com/
+
+Go to https://console.hookdeck.com/, click on "Add Destination", select "Localhost", it will ask you to install hookdeck on your machine, choose a type of installation based on your OS. We are going to use Docker approach.
+
+Install the Hookdeck CLI on your device
+
+docker pull hookdeck/hookdeck-cli
+docker run --rm -it hookdeck/hookdeck-cli version
+
+docker run --rm -it hookdeck/hookdeck-cli listen http://host.docker.internal:8071 --path /monitor
+
+Copy the URL returned by hookdec and use for creating a webhook in GitHub
+Paste the URL in GitHub Webhook creation window, leave the defaults and click on "Add Webhook"
+
+Ex: https://hkdk.events/38iuf8zis67klu
+
+6.3 Enable Actuator endpoints on Config Server by updating its application.properties file
+
+Whenever the GitHub repository sends a webhook request to the monitor API, behind the scenes, our config server is going to use the Spring Cloud Bus, so that is why since behind the scenes it is going to ivoke automatically the "/busrefresh" API path, we need to make sure we are benabing a these management endpoints inside the config server as well.
+
+  management.endpoints.web.exposure.include=*
+
+6.4 Add RabbitMQ related configuration to Config Server by updating the application.properties file
+
+spring.rabbitmq.host=localhost
+spring.rabbitmq.port=5672
+spring.rabbitmq.username=guest
+spring.rabbitmq.password=guest
+
+6.5 Start all your services (Config server and Client services) and verify 
+
+7. Updating Docker Compose to adapt to Config Server changes
+
+7.1 Create a folder named "v2-spring-cloud-config-dockerizing" and move the projects under this folder
+
+Create a folder named docker-compose and have subfolders like default, qa, and prod
+
+7.2 Liveness and Readiness probes
+
+Liveness - A Liveness probe sends a signal that the container or appliation is either alive (passing) or dead(failing). If the container is alive, then no action is required because the current state is good. If the container is dead, then an attempt should be made to heal the application by restarting it. 
+
+In simple words, liveness answers a true or false question: "Is this container alive?"
+
+Readiness - A readiness probe used to know whether the container or app being probed is ready to start receiving network traffic. If your container enters a state where it is still alive but cannot handle incoing network traffic (a common scenario during startup), you want the readiness probe to fail, so that the traffic will be sent to a container which is not ready for it. 
+
+If someone prematurely send network traffic to the container, it could cause the load balancer (or router) to return a 502 error to the client and terminate the request. The client would get a "connection refused" error message.
+
+In simple words, readiness answers a true-or-false question: "Is this container ready to receive network traffic?"
+
+Inside Spring Boot applications, the actuator gathers the "Liveness" and "Readiness" information from the ApplicationAvailability Interface and uses that information in dedicated health indicators. LivenessStateHealthIndicator and ReadinessStateHealthIndicator. These indicators are shown on the global health endpoint ("/actuator/health"). They are also exposed as separate HTTP probes by using health groups: "/actuator/health/liveness" and "/actuator/health/readiness"
+
+7.2.1 Update Config Server's application.properties file to enable readiness and liveness state
+
+  management.health.readiness-state.enabled=true
+  management.health.liveness-state.enable=true
+  management.endpoint.health.probes.enabled=true
+
+7.2.2 Invoke the health endpoint on Config Server to see the status 
+
+http://localhost:8071/actuator/health
+
+{
+  "status": "UP",
+  "groups": [
+    "liveness",
+    "readiness"
+  ]
+}
+
+http://localhost:8071/actuator/health/liveness
+
+{
+  "status": "UP"
+}
+
+http://localhost:8071/actuator/health/readiness
+
+{
+  "status": "UP"
+}
+
+7.3 Update docker-compose.yml file
+
+7.3.1 Create a file named common-config.yml and move common configurations required for the services defined in docker-compose.yml
+
+common-config.yml 
+
+  services:
+    network-deploy-service:
+      networks:
+        - dhandapaniks-xyzbank-msntwrk
+
+    microservice-base-config:
+      extends:
+        service: network-deploy-service
+      deploy:
+        resources:
+          limits:
+            memory: 700m
+
+    microservice-configserver-config:
+      extends:
+        service: microservice-base-config
+      environment:
+        SPRING_PROFILES_ACTIVE: default
+        SPRING_CONFIG_IMPORT: "configserver:http://ms-config-server:8071/"
+
+docker-compose.yml
+
+  services:
+    rabbitmq:
+      image: rabbitmq:4-management
+      hostname: rabbitmq
+      ports:
+        - "5672:5672"
+        - "15672:15672"
+      healthcheck:
+        test: rabbitmq-diagnostics check_port_connectivity # From rabbitmq official documentation
+        interval: 10s
+        timeout: 5s
+        retries: 10
+        start_period: 5s
+      extends:
+        file: common-config.yml
+        service: network-deploy-service
+
+    ms-config-server:
+      image: "dhandapaniks/ms-config-server:0.0.1"
+      container_name: "ms-config-server"
+      ports:
+        - "8071:8071"
+      depends_on:
+        rabbitmq:
+          condition: service_healthy
+      healthcheck:
+        test: "curl --fail --silent localhost:8071/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+        interval: 10s
+        timeout: 5s # In each check, it has to wait for 5 seconds
+        retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+        start_period: 10s # Execute health check command or api only after 10 seconds
+      extends:
+        file: common-config.yml
+        service: microservice-base-config
+
+    ms-accounts:
+      image: "dhandapaniks/ms-accounts:0.0.1"
+      container_name: "ms-accounts"
+      ports:
+        - "8080:8080"
+      depends_on:
+        ms-config-server:
+          condition: service_healthy
+      environment:
+        SPRING_APPLICATION_NAME: "ms-accounts"
+      extends:
+        file: common-config.yml
+        service: microservice-configserver-config
+
+    ms-loans:
+      image: "dhandapaniks/ms-loans:0.0.1"
+      container_name: "ms-loans"
+      ports:
+        - "8090:8090"
+      depends_on:
+        ms-config-server:
+          condition: service_healthy
+      environment:
+        SPRING_APPLICATION_NAME: "ms-loans"
+      extends:
+        file: common-config.yml
+        service: microservice-configserver-config
+
+    ms-cards:
+      image: "dhandapaniks/ms-cards:0.0.1"
+      container_name: "ms-cards"
+      ports:
+        - "9000:9000"
+      depends_on:
+        ms-config-server:
+          condition: service_healthy
+      environment:
+        SPRING_APPLICATION_NAME: "ms-cards"
+      extends:
+        file: common-config.yml
+        service: microservice-configserver-config
+
+  networks:
+    dhandapaniks-xyzbank-msntwrk:
+      driver: "bridge"  
+
+Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+
+7.3.2 Generate Docker images for services
+
+We are using Buildbacks for generating images of individual services
+
+Run maven command, "mvn spring-boot:build-image" from the location where pom.xml is present to generate docker image without the need of Dockerfile. Behind the scenes, it is going leverage Buildpacks.
+
+If we are using Buildpacks, we need to make sure we have the following plugin in pom.xml
+
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <configuration>
+          <image>
+            <name>dhandapaniks/${project.artifactId}:0.1</name>
+          </image>
+          <excludes>
+            <exclude>
+              <groupId>org.projectlombok</groupId>
+              <artifactId>lombok</artifactId>
+            </exclude>
+          </excludes>
+        </configuration>
+      </plugin>
+
+Generate image for ms-accounts 
+
+Move to folder D:\STS_WS\v2-spring-cloud-config-dockerizing\ms-accounts
+
+Run: mvn spring-boot:build-image "-Dmaven.test.skip=true"
+
+Generate image for ms-cards
+
+Move to folder D:\STS_WS\v2-spring-cloud-config-dockerizing\ms-cards
+
+Run: mvn spring-boot:build-image "-Dmaven.test.skip=true"
+
+Generate image for ms-loans
+
+Move to folder D:\STS_WS\v2-spring-cloud-config-dockerizing\ms-loans
+
+Run: mvn spring-boot:build-image "-Dmaven.test.skip=true"
+
+Generate image for ms-config-server (Using Google Jib Plugin)
+
+- Curl is not installed when we generate image using Buildpacks, so for ms-config-server, we use google jib plugin
+
+Add the following plugin configuration to ms-config-server's pom.xml (Include jib-maven-plugin)
+
+For Buildpacks:
+
+Include the following to spring-boot-maven-plugin
+
+        <configuration>
+          <!-- Required for windows start -->
+          <docker>
+            <host>//./pipe/dockerDesktopLinuxEngine</host>
+          </docker>
+          <!-- Required for windows end -->
+          <image>
+            <name>dhandapaniks/${project.artifactId}:0.0.1</name>
+          </image>
+        </configuration>
+
+Updated spring-boot-maven-plugin
+
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <configuration>
+          <!-- Required for windows start -->
+          <docker>
+            <host>//./pipe/dockerDesktopLinuxEngine</host>
+          </docker>
+          <!-- Required for windows end -->
+          <image>
+            <name>dhandapaniks/${project.artifactId}:0.0.1</name>
+          </image>
+        </configuration>
+      </plugin>
+
+For Google Jib:
+
+      <build>
+          <plugins>
+            <plugin>
+              <groupId>org.springframework.boot</groupId>
+              <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+              <groupId>com.google.cloud.tools</groupId>
+              <artifactId>jib-maven-plugin</artifactId>
+              <version>3.4.2</version>
+              <configuration>
+                <to>
+                  <image>dhandapaniks/${project.artifactId}:0.0.1</image>
+                </to>
+              </configuration>
+            </plugin>
+          </plugins>
+        </build>
+
+Move to folder D:\STS_WS\v2-spring-cloud-config-dockerizing\ms-config-server
+
+Run: mvn compile jib:dockerBuild (If using google jib)
+
+Run: mvn spring-boot:build-image "-Dmaven.test.skip=true" (If using  buildpacks)
+
+7.3.3 Push the images to Docker Hub
+
+docker image push docker.io/dhandapaniks/ms-accounts:0.0.1
+
+docker image push docker.io/dhandapaniks/ms-loans:0.0.1
+
+docker image push docker.io/dhandapaniks/ms-cards:0.0.1
+
+docker image push docker.io/dhandapaniks/ms-config-server:0.0.1
+
+8. Test Config Server changes end to end using Docker Compose and default profile
+
+Navigate to the folder, where we have docker-compose.yml file
+
+D:\STS_WS\v2-spring-cloud-config-dockerizing\docker-compose\default
+
+Run the command: docker compose up -d
+
+PS D:\STS_WS\v2-spring-cloud-config-dockerizing\docker-compose\default> docker compose up -d
+[+] Running 5/5
+ ✔ Container default-rabbitmq-1  Healthy                                                                                       19.8s
+ ✔ Container ms-config-server    Healthy                                                                                       41.2s
+ ✔ Container ms-cards            Started                                                                                       42.0s
+ ✔ Container ms-accounts         Started                                                                                       41.8s
+ ✔ Container ms-loans            Started                                                                                       42.0s
+
+We can see the status of default-rabbitmq-q and ms-config-server are healthy.
+
+To stop the services, run: docker compose down - It will stop and remove all the containers
+
+9. Test Config Server changes end to end using Docker Compose and QA, PROD profiles
+
+Copy docker-compose.yml ad common-config.yml files from default folder and paste them inside qa and prod folders
+
+In common-config.yml file, update the microservice-configserver-config service
+
+Replace SPRING_PROFILES_ACTIVE: default to SPRING_PROFILES_ACTIVE: qa or SPRING_PROFILES_ACTIVE: prod
+
+Run "docker compose up -d" from PS D:\STS_WS\v2-spring-cloud-config-dockerizing\docker-compose\qa> for QA
+
+PS D:\STS_WS\v2-spring-cloud-config-dockerizing\docker-compose> cd qa
+PS D:\STS_WS\v2-spring-cloud-config-dockerizing\docker-compose\qa> docker compose up -d
+[+] Running 6/6
+ ✔ Network qa_dhandapaniks-xyzbank-msntwrk  Created                                                                             0.1s
+ ✔ Container qa-rabbitmq-1                  Healthy                                                                            18.8s
+ ✔ Container ms-config-server               Healthy                                                                            40.0s
+ ✔ Container ms-loans                       Started                                                                            40.1s
+ ✔ Container ms-accounts                    Started                                                                            40.3s
+ ✔ Container ms-cards                       Started                                                                            40.3s
+ 
+Run "docker compose up -d" from PS D:\STS_WS\v2-spring-cloud-config-dockerizing\docker-compose\prod> for PROD
+
+

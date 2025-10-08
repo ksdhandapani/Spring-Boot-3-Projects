@@ -1,0 +1,748 @@
+----------------------------------------
+SERVICE DISCOVERY & SERVICE REGISTRATION 
+----------------------------------------
+
+Connecting with the services through a single entry point.
+
+>>> Challenges:
+
+How do microservices discover other microservices, and how do they register themselves in a microservices network?
+
+How do services locate each other inside a network? - Each instance of a microservice exposes a remote API with its own host and port. How do other microservices and clients know about these dynamic endpoint URLs to invoke them, so where is my service?
+
+How do new service instances enter the network? - If a microservice instance fails, new instances will be brought online to ensure constant availability. This means that the IP addresses of the instances can change constantly. So, how can these new instances start serving clients?
+
+How can we effectively load balance and share information among multiple instances of microservices? - Specifically, how do we ensure proper load balancing when one microservice invokes another? Additionally, how is specific service information shared across the network?
+
+>>> Solution: 
+
+1. Service Discovery
+2. Service Registration
+3. Load Balancing
+
+>>> Why not traditional load balancers for Microservices? 
+
+Inside a web network, when a service or app wants to communicate with another service or app, it must be given the necessary information to locate it, such as an IP address or a DNS name. Let's examine the scenario of two services, Account and Loans. If there were only a single instance of the Loans microservice, the figure below illustrates how the communication between the two applications would occur 
+
+Accounts MS (Upstream Service) <<<------------------------------->>> Loans MS (Downstream Service - 127.54.37.23)
+
+Internal communication between microservices using hostname, DNS or IP address
+No Service Discovery or Load Balancing involved
+
+When there is only one instance of the Loans microservice running, managing the DNS name and its corresponding IP address mapping is straightforward. However, in a cloud environment, it is common to deploy multiple instances of a service, with each instance having its own unique IP address.
+
+To address this challenge, one approach is to update the DNS records with multiple IP addresses and rely on round-robin name resolution. This method directs requests to one of the IP addresses assigned to the service replicas in a rotating manner. However, this approach may not be suitable for microservices, as containers or services change frequently. This rapid change makes it difficult to maintain accurate DNS records and ensure efficient communication between microservices. 
+
+Unlike physical machines or long-running virtual machines, cloud-based service instances have a shorter lifespan. These instances are designed to be disposable and can be terminated or replaced for various reasons, such as unresponsiveness. Furthermore, auto-scaling capabilities can be enabled to automatically adjust the number of application instances based on the workload.
+
+>>> Limitations with Traditional Load Balancers
+
+*** The biggest challenge with a Traditional Load Balancer is that someone has to manually maintain the routing tables, which is an impossible task inside the microservices network, because containers/services are ephemeral (lasting for a very short time) in nature.
+
+With the Traditional load-balancing approach, each instance of a service used to be deployed in one or more application servers. The number of these application servers was often static and even in the case of restoration, it would be restored to the same state with the same IP and other configurations.
+
+While this type of model works well with monolithic and SOA-based applications with a relatively small number of services running on a  group of static servers, it does not work well for cloud-based microservice applications for the following.
+
+- Limited horizontal scalability and license costs
+- Single point of failure & centralised chokepoints
+- Manually managed to update any IPs, configurations
+- Complex in nature & not container-friendly
+
+Horizontal scaling, also known as "scaling out", refers to increasing system capacity by adding more servers or nodes rather than upgrading the existing ones. This approach distributes workloads across multiple systems, enhancing overall performance and capacity to handle increased demand.
+
+>>> How to solve the above problems?
+
+For cloud native applications, "Service Discovery" is the perfect solution. It involves tracking and storing information about all running service instances in a "Service Registry".
+
+Whenever a new instance is created, it should be registered in the registry, and when it is terminated, it should be appropriately removed automatically. 
+
+The registry acknowledges that multiple instances of the same application can be active simultaneously. When an application needs to communicate with a backing service, it performs a "lookup" in the "registry" to determine the IP address to connect to. If multiple instances are available, a "load-balancing" strategy is employed to evenly distribute the workload among them.
+
+Client-side service discovery and Server-side service discovery are the distinct approaches that address the service discovery problem in different contexts.
+
+>>> Service Discovery and Registration Pattern
+
+*** Service Discovery and Registration deal with the problems of how microservices talk to each other, i.e. perform API calls.
+
+In a modern microservice architecture, knowing the right network location of an application is a much more complex problem for the clients, as service instances might have dynamically assigned IP addresses. Moreover, the number of instances may vary due to autoscaling and failures. 
+
+Microservices service discovery & registration is a way for applications and microservices to locate each other on a network. This includes the following:
+
+- A central server (or servers) that maintains a global view of addresses
+- Microservices/clients that connect to the central server to register their address when they start and are ready
+- Microservices/clients need to send their heartbeats at regular intervals to the central server about their health
+- Microservices/clients that connect to the central server to deregister their addresses when they are about to shut down
+
+>>> Client-side Service Discovery and Load Balancing
+
+In a Client-Side Service Discovery, applications are responsible for registering themselves with a service registry during startup and unregistering when shutting down. When an application needs to communicate with a backing service, it queries the service registry for the associated IP address. If multiple instances of the service are available, the registry returns a list of IP addresses. The client application then selects one based on its own defined load-balancing strategy. 
+
+Service Registry
+Loans Microservice 1 (127.54.37.32)
+Loans Microservice 2 (127.54.37.33)
+Accounts Microservice
+
+1. Loan services register with the Service registry during startup and send regular heartbeats
+2. The Accounts service asks the Service Registry for the address details of the Loans service
+3. Service Registry returns the list of IP addresses of available Loan service instances to the Accounts Service
+4. The Accounts Microservice is going to invoke one of the instances of the Loans service based on the load-balancing strategy configured
+
+"Client-side service discovery is an architectural pattern where client applications are responsible for locating and connecting to services they depend on. In this approach, the client application communicates directly with a service registry to discover available service instances and obtain the necessary information to establish connections"
+
+Here are the key aspects of client-side service discovery:
+
+- Service Registration: Client applications register themselves with the service registry upon startup. They provide essential information about their location, such as IP address, port, and metadata, which helps identify and categorize the service.
+
+- Service Discovery: When a client application needs to communicate with a specific service, it queries the service registry for available instances of the service. The registry responds with the necessary information, such as IP addresses and connection details.
+
+- Load Balancing: Client-side service discovery often involves load balancing to distribute the workload across multiple service instances. The client application can implement a load-balancing strategy to select a specific instance based on factors like round-robin, weighted distribution, or latency.
+
+Advantage - The major advantage of client-side service discovery is that load balancing can be implemented using various algorithms, such as round-robin, weighted round-robin, least connections, or even custom Algorithms. 
+
+Disadvantage / Drawback - A drawback is that client service discovery assigns more responsibility to developers. Also, it results in one more service to deploy and maintain (Service registry).
+
+Server-side discovery solutions solve these issues. We are going to discuss the same when we are talking about Kubernetes.
+
+How load balancing works in Client-side Service Discovery:
+
+Loans, Cards Services <<<------------->>> Service Discovery Layer (Node 1, Node 2) <<<------------->>> Accounts Service
+
+Loans and Card service instances send a heartbeat to the service discovery agent. If a service does not send a heartbeat, service discovery will remove the IP of the dead instance from the list.
+
+Service Discovery nodes communicate with each other about new services, the health of the services, etc.
+
+When the Accounts service wants to connect with other microservices, it will check the local cache for the service instances' IPs. Load balancing also happens at the service level itself without depending on the Service Discovery.
+
+On the Accounts Service end, periodically, the client-side cache will be refreshed with the server discovery layer. If a client finds a service IP in the cache, it will directly invoke the backing service, otherwise, it goes to the service discovery.
+
+>>> Spring Cloud Support for Client-side service discovery
+
+Spring Cloud Netflix's Eureka service, which will act as a service discovery agent
+Spring Cloud Load Balancer library for client-side load balancing
+Netflix Feign Client to look up a service between microservices
+
+Though in this course we use Eureka since it is mostly used, there are other service registries such as etcd, Consul, and Apache Zookeeper, which are also good. 
+
+Though Netflix Ribbon client-side is also a good and stable product, we are going to use Spring Cloud Load Balancer for client-side load balancing, This is because Ribbon has entered a maintenance mode and unfortunately, it will not be developed anymore.
+
+>>> Implementation - Set up Eureka Server
+
+Step 1: Set up the Service Discovery agent using the Eureka Server
+
+Add Eureka Server dependency to the project
+
+    <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-netflix-eureka-server</artifactId>
+    </dependency>
+
+Step 2: Annotate the main class with the @EnableEurekaServer annotation
+
+Step 3: Add Config Server details to application.properties
+
+# Location of / Link to access the config server
+spring.config.import=optional:configserver:http://localhost:8071/
+
+Step 4: Add configuration related to the enablement of application readiness and liveness in application.properties
+
+management.endpoints.web.exposure.include=*
+
+management.health.readiness-state.enabled=true
+management.health.liveness-state.enabled=true
+management.endpoint.health.probes.enabled=true
+
+Step 5: Create a property file named sa-eurekaserver.properties with the below content and add it to the configuration files repository
+
+https://github.com/ksdhandapani/microservices-config-server-configuration-source/blob/main/ms-eurekaserver.properties
+
+server.port=8070
+
+eureka.instance.hostname=localhost
+# The default value is true, but we do not want our eurekaserver to fetch the registry details of other microservices. Our microservices will never call the microservices, it is unnecessary to fetch all the registry details of the microservices
+eureka.client.fetchRegistry=false
+# We are telling eurekaserver not to register itself and do not expose your details in the registry of the Service Discovery
+eureka.client.registerWithEureka=false
+# eurekaserver will expose its functionality with this URL, and the other microservices can try to connect to register their details or to discover other service details
+eureka.client.serverUrl.defaultZone=http://${eureka.instance.hostname}:${server.port}/eureka/
+
+Step 6: Start the Config Server first
+
+http://localhost:8071/ms-eurekaserver/default
+
+Step 7: Start Eureka Server
+
+Once the Eureka Server is up and running, we can access the dashboard using: http://localhost:8070/ - It displays information about registered service instances
+
+>>> Implementation - Update Accounts, Loans and Cards Microserivce to Connect to Eureka Server
+
+Step 1: Add the "Eureka Discovery Client" dependency to Accounts, Loans and Cards services
+
+Eureka Discovery Client is a REST based service for locating services for the purpose of load balancing and failover of middle-tier servers.
+
+    <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+    </dependency>
+
+Step 2: Add the following properties to application.properties of Accounts, Loans and Cards services
+
+# Whenever the Accounts/Loans/Cards Microservice is trying to register with Eureka Server by default it will try to register with the Hostname (Hostname is useful whenever we are trying to use the DNS mapping inside our microservices network, but inside our local system we do not have any DNS mapping set up, so we should use preferIpAddress as true so that our Accounts/Loans/Cards microservice will register with Eureka Server by using the IP address. Behind the scenes, whenever the other microservices are trying to connect with the service, Eureka Server will share the IP address details of the service.)
+eureka.instance.preferIpAddress=true
+# The Accounts/Loans/Cards microservice will try to fetch the registry details whenever it is trying to connect with other microservices
+eureka.client.fetchRegistry=true
+# We want our Accounts/Loans/Cards microservice to be registered with Eureka Server
+eureka.client.registerWithEureka=true
+eureka.client.serviceUrl.defaultZone=http://localhost:8070/eureka
+
+# The below information will be shown in Eureka Server's Dashboard
+info.app.name=ms-accounts or info.app.name=ms-loans or info.app.name=ms-cards
+info.app.description= XYZ Bank Accounts Application or XYZ Bank Loans Application or XYZ Bank Cards Application
+info.app.version=1.0.0
+
+# Enable info property
+management.info.env.enabled=true
+
+# enabled.true is deprecated, use access.unrestricted instead
+management.endpoint.shutdown.enabled=true
+
+# Setting this property is no longer required and can be ignored
+endpoints.shutdown.enabled=true
+
+-- application.properties of ms-accounts
+
+# Whenever the Accounts/Loans/Cards Microservice is trying to register with Eureka Server by default it will try to register with the Hostname (Hostname is useful whenever we are trying to use the DNS mapping inside our microservices network, but inside our local system we do not have any DNS mapping set up, so we should use preferIpAddress as true so that our Accounts/Loans/Cards microservice will register with Eureka Server by using the IP address. Behind the scenes, whenever the other microservices are trying to connect with the service, Eureka Server will share the IP address details of the service.)
+eureka.instance.preferIpAddress=true
+# The Accounts/Loans/Cards microservice will try to fetch the registry details whenever it is trying to connect with other microservices
+eureka.client.fetchRegistry=true
+# We want our Accounts/Loans/Cards microservice to be registered with Eureka Server
+eureka.client.registerWithEureka=true
+eureka.client.serviceUrl.defaultZone=http://localhost:8070/eureka
+
+# The below information will be shown in Eureka Server's Dashboard
+info.app.name=ms-accounts
+info.app.description= XYZ Bank Accounts Application
+info.app.version=1.0.0
+
+# Enable info property
+management.info.env.enabled=true
+
+# enabled.true is deprecated, use access.unrestricted instead
+management.endpoint.shutdown.enabled=true
+
+# Setting this property is no longer required and can be ignored
+endpoints.shutdown.enabled=true
+
+-- application.properties of ms-loans
+
+# Whenever the Accounts/Loans/Cards Microservice is trying to register with Eureka Server by default it will try to register with the Hostname (Hostname is useful whenever we are trying to use the DNS mapping inside our microservices network, but inside our local system we do not have any DNS mapping set up, so we should use preferIpAddress as true so that our Accounts/Loans/Cards microservice will register with Eureka Server by using the IP address. Behind the scenes, whenever the other microservices are trying to connect with the service, Eureka Server will share the IP address details of the service.)
+eureka.instance.preferIpAddress=true
+# The Accounts/Loans/Cards microservice will try to fetch the registry details whenever it is trying to connect with other microservices
+eureka.client.fetchRegistry=true
+# We want our Accounts/Loans/Cards microservice to be registered with Eureka Server
+eureka.client.registerWithEureka=true
+eureka.client.serviceUrl.defaultZone=http://localhost:8070/eureka
+
+# The below information will be shown in Eureka Server's Dashboard
+info.app.name=ms-loans
+info.app.description= XYZ Loans Accounts Application
+info.app.version=1.0.0
+
+# Enable info property
+management.info.env.enabled=true
+
+# enabled.true is deprecated, use access.unrestricted instead
+management.endpoint.shutdown.enabled=true
+
+# Setting this property is no longer required and can be ignored
+endpoints.shutdown.enabled=true
+
+-- application.properties of ms-cards
+
+# Whenever the Accounts/Loans/Cards Microservice is trying to register with Eureka Server by default it will try to register with the Hostname (Hostname is useful whenever we are trying to use the DNS mapping inside our microservices network, but inside our local system we do not have any DNS mapping set up, so we should use preferIpAddress as true so that our Accounts/Loans/Cards microservice will register with Eureka Server by using the IP address. Behind the scenes, whenever the other microservices are trying to connect with the service, Eureka Server will share the IP address details of the service.)
+eureka.instance.preferIpAddress=true
+# The Accounts/Loans/Cards microservice will try to fetch the registry details whenever it is trying to connect with other microservices
+eureka.client.fetchRegistry=true
+# We want our Accounts/Loans/Cards microservice to be registered with Eureka Server
+eureka.client.registerWithEureka=true
+eureka.client.serviceUrl.defaultZone=http://localhost:8070/eureka
+
+# The below information will be shown in Eureka Server's Dashboard
+info.app.name=ms-cards
+info.app.description= XYZ Bank Cards Application
+info.app.version=1.0.0
+
+# Enable info property
+management.info.env.enabled=true
+
+# enabled.true is deprecated, use access.unrestricted instead
+management.endpoint.shutdown.enabled=true
+
+# Setting this property is no longer required and can be ignored
+endpoints.shutdown.enabled=true
+
+Step 3: Start the Accounts, Loans and Cards services
+
+Make sure Config Server and Eureka Server are up and running before running the client services
+
+Once the clients are started, we can see the currently registered services with Eureka here - http://localhost:8070/
+
+http://localhost:8070/eureka/apps - Returns the applications detail in XML format
+
+>>> Implementation - De-registration from Eureka Server when Microservices down
+
+Shutdown the services using Actuator's shutdown endpoint
+
+http://localhost:8080/actuator/shutdown (ms-accounts)
+http://localhost:9000/actuator/shutdown (ms-loans)
+http://localhost:8090/actuator/shutdown (ms-cards)
+
+>>> Implementation - Invoke other services using Feign Client
+
+Step 1: Add "openfeign" starter dependency to Accounts Microservice (accounts-ms)
+
+    <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-openfeign</artifactId>
+    </dependency>   
+
+Step 2: Annotate the "MsAccountsApplication" class with "@EnableFeignClients"
+
+  package com.dhandapani.ms_accounts;
+
+  import org.springframework.boot.SpringApplication;
+  import org.springframework.boot.autoconfigure.SpringBootApplication;
+  import org.springframework.boot.context.properties.EnableConfigurationProperties;
+  import org.springframework.cloud.openfeign.EnableFeignClients;
+  import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+
+  import com.dhandapani.ms_accounts.dto.AccountContactInfoDto;
+
+  import io.swagger.v3.oas.annotations.OpenAPIDefinition;
+  import io.swagger.v3.oas.annotations.info.Contact;
+  import io.swagger.v3.oas.annotations.info.Info;
+  import io.swagger.v3.oas.annotations.info.License;
+
+  @SpringBootApplication
+  @EnableFeignClients
+  @EnableJpaAuditing(auditorAwareRef = "auditAwareImpl")
+  @EnableConfigurationProperties(value = { AccountContactInfoDto.class })
+  @OpenAPIDefinition(info = @Info(title = "Accounts Microservice REST API Documentation", description = "DBank Accounts Microservice REST API Documentation", version = "v1", contact = @Contact(name = "Dhandapani Sudhakar", email = "ksdhandapani96@gmail.com", url = "https://ksdhandapani96.com"), license = @License(name = "Apache 2.0", url = "https://ksdhandapani96.com")))
+  public class MsAccountsApplication {
+
+    public static void main(String[] args) {
+      SpringApplication.run(MsAccountsApplication.class, args);
+    }
+
+  }
+
+In order to connect with Loans and Cards services from Accounts, in a traditional approach, we will use RestTemplate or WebClient classes.
+
+Whenever we are using OpenFeign Client, we do not have to write the implementation logic; we just have to create the interfaces along with abstract methods.
+
+Step 3: Create a client interface for each Microservice that you are going to connect with and annotate the interface with @FeignClient("service_name")
+
+The "service_name" that we pass here should match the service name of the service registered with the Eureka Server
+
+Step 4: Create abstract methods in Client interfaces
+
+Method Signature:
+
+Whatever the abstract method that we create inside the Client interface, the method signature has to match the actual REST API method that we have defined inside the Client Microservice (Cards/Loans).
+
+Path Mapping Annotation:
+
+The path mapping annotation we have on the REST API from the Client Service and the one we have on the Abstract method should be the same. Just copy the annotation from the client-side rest api and paste it on the abstract method.
+
+If the REST API on the Client Service has a root path at the controller level, we have to include the complete path in the abstract method's path annotation. 
+
+Validation Logic:
+
+In the method signature, we do not have to include details about the validations, if we have any, that will be handled at the actual REST API that we have inside the Client Microservice.
+
+DTO:
+
+If the REST API's method signature has any DTOs, create the same DTO class in the service that invokes the other Client Microservice. In this example, we copy the LoanDto and CardDto from the Loans and Cards Client Microservices.
+
+REST API on Cards Microservice
+
+  @Operation(summary = "Fetch Card Details by Mobile Number", description = "REST API to fetch card details by mobile number")
+  @ApiResponses({ @ApiResponse(responseCode = "200", description = "HTTP Status Successful"),
+      @ApiResponse(responseCode = "404", description = "HTTP Status Not Found"),
+      @ApiResponse(responseCode = "500", description = "HTTP Status Internal Server Error") })
+  @GetMapping(path = "/fetch")
+  public ResponseEntity<CardDto> fetchCardByMobileNumber(
+      @RequestParam @Pattern(regexp = "(^$|[0-9]{10})", message = "Mobile Number must be 10 digits") String mobileNumber) {
+    CardDto cardDto = cardService.fetchCardByMobileNumber(mobileNumber);
+    return ResponseEntity.status(HttpStatus.CREATED).body(cardDto);
+  }
+
+REST API on Loans Microservice
+
+  @Operation(summary = "Fetch Loan Details by Mobile Number", description = "REST API to fetch loan details by mobile number")
+  @ApiResponses({ @ApiResponse(responseCode = "200", description = "HTTP Status Successful"),
+      @ApiResponse(responseCode = "404", description = "HTTP Status Not Found"),
+      @ApiResponse(responseCode = "500", description = "HTTP Status Internal Server Error") })
+  @GetMapping(path = "/fetch")
+  public ResponseEntity<LoanDto> fetchLoanDetailByMobileNumber(
+      @RequestParam @Pattern(regexp = "(^$|[0-9]{10})", message = "Mobile Number should be 10 digits") String mobileNumber) {
+    LoanDto fetchedLoan = loanService.fetchLoanByMobileNumber(mobileNumber);
+    return ResponseEntity.status(HttpStatus.OK).body(fetchedLoan);
+
+  }
+
+FeignClient interface with abstract methods for Cards Service (in Accounts Service)
+
+  package com.dhandapani.ms_accounts.service.client;
+
+  import org.springframework.cloud.openfeign.FeignClient;
+  import org.springframework.http.MediaType;
+  import org.springframework.http.ResponseEntity;
+  import org.springframework.web.bind.annotation.GetMapping;
+  import org.springframework.web.bind.annotation.RequestParam;
+
+  import com.dhandapani.ms_accounts.dto.CardDto;
+
+  @FeignClient(name = "ms-cards")
+  public interface MsCardsFeignClient {
+
+    @GetMapping(path = "/api/cards/fetch", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<CardDto> fetchCardByMobileNumber(@RequestParam String mobileNumber);
+  }
+
+FeignClient interface with abstract methods for Loans Service (in Accounts Service)
+
+  package com.dhandapani.ms_accounts.service.client;
+
+  import org.springframework.cloud.openfeign.FeignClient;
+  import org.springframework.http.MediaType;
+  import org.springframework.http.ResponseEntity;
+  import org.springframework.web.bind.annotation.GetMapping;
+  import org.springframework.web.bind.annotation.RequestParam;
+
+  import com.dhandapani.ms_accounts.dto.LoanDto;
+
+  @FeignClient(name = "ms-loans")
+  public interface MsLoansFeignClient {
+
+    @GetMapping(path = "/api/loans/fetch", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<LoanDto> fetchLoanDetailByMobileNumber(@RequestParam String mobileNumber);
+  }
+
+Step 5: Start the services and verify the access (Connection to other microservices through FeignClient)
+
+>>> Implementation - Eureka Self-Preservation mode to aovid network trap issues
+
+- Minimal explanation:
+
+Eureka Server will not panic when it is not receiving heartbeats from the majority of the instances; instead, it will be calm and 
+enters into Self-Preservation mode. This feature is a saviour where the network's glitches are common and helps us to handle false-positive alarms.
+
+- Detailed explanation:
+
+In a distributed system using Eureka, each service instance periodically sends a heartbeat signal to the Eureka server to indicate that it is still alive and functioning. If the Eureka server does not receive a heartbeat from a service instance within a certain timeframe, it assumes that the instance has become unresponsive or has crashed. In normal scenarios, this behaviour helps the Eureka server maintain an up-to-date view of the registered service instances.
+
+However, in certain situations, network glitches or temporary system delays may cause the Eureka server to miss a few heartbeats, leading to False expiration of service instances. This can result in unnecessary evictions of healthy service instances from the registry, causing instability and disruption in the system. 
+
+To mitigate the issue, Eureka enters into Self-Preservation mode. When Self-Preservation mode is active, the existing registry entries will not be removed even if it stops receiving heartbeats from some of the service instances. This prevents the Eureka server from evicting all the instances due to temporary network glitches or delays.
+
+In Self-Preservation, the Eureka server continues to serve the registered instances to client applications, even if it suspects that some instances are no longer available. This helps maintain the stability and availability of the service registry, ensuring that clients can still discover and interact with the available instances.
+
+Self-Preservation mode never expires, until and unless the down microservices are brought back or the network glitch is resolved. This is because the Eureka server will not expire the instances till it is above the threshold limit.
+
+- Configurations that will directly or indirectly impact the self-preservation behaviour of Eureka server
+
+eureka.instances.lease-renewal-interval-in-seconds = 30 - Indicates the frequency the client sends heartbeats to the server to indicate that it is still alive
+
+eureka.instances.lease-expiration-duration-in-seconds = 90 - Indicates the duration the server waits since it received the last heartbeat before it can evict an instance
+
+eureka.server.eviction-interval-timer-in-ms = 60*1000 - A scheduler (Eviction Task) is run at this frequency, which will evict instances from the registry if the lease of the instances are expired as configured by lease-expiration-duration-in-seconds. It will also check whether the system has reached self-preservation mode (by comparing actual and expected heartbeats) before evicting
+
+eureka.server.renewal-percent-threshold = 0.85 - This value is used to calculate the expected % of heartbeats per minute that Eureka is expecting
+
+eureka.server.renewal-threshold-update-interval-ms = 15*60*1000 - A scheduler is run at this frequency, which calculates the expected heartbeats per minute
+
+eureka.server.enable-self-preservation = true - By default, self-preservation mode is enabled but if you need to disable it, you can change it to "false"
+
+>>> Implementation - Generating Docker images with Service Registry changes
+
+Step 1: Add Google Jib dependency to Eureka Server
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>com.google.cloud.tools</groupId>
+        <artifactId>jib-maven-plugin</artifactId>
+        <version>3.4.2</version>
+        <configuration>
+          <to>
+            <image>dhandapaniks/${project.artifactId}:0.0.1</image>
+          </to>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+Step 2: Go to terminal and generate docker image using Google Jib
+
+PS D:\STS_WS\Service-Discovery-and-Service-Registration\ms-config-server> mvn compile jib:dockerBuild
+PS D:\STS_WS\Service-Discovery-and-Service-Registration\ms-eurekaserver> mvn compile jib:dockerBuild
+PS D:\STS_WS\Service-Discovery-and-Service-Registration\ms-accounts> mvn compile jib:dockerBuild
+PS D:\STS_WS\Service-Discovery-and-Service-Registration\ms-loans> mvn compile jib:dockerBuild
+PS D:\STS_WS\Service-Discovery-and-Service-Registration\ms-cards> mvn compile jib:dockerBuild
+
+Step 3: Push images to Docker Hub
+
+docker image push docker.io/dhandapaniks/ms-config-server:0.0.3
+docker image push docker.io/dhandapaniks/ms-eurekaserver:0.0.3
+docker image push docker.io/dhandapaniks/ms-accounts:0.0.3
+docker image push docker.io/dhandapaniks/ms-loans:0.0.3
+docker image push docker.io/dhandapaniks/ms-cards:0.0.3
+
+>>> Implementation - Update Docker Compose file to adapt Service Discovery Changes
+
+- default/common-config.yml
+
+  services:
+    network-deploy-service:
+      networks:
+        - dhandapaniks-xyzbank-msntwrk
+
+    microservice-base-config:
+      extends:
+        service: network-deploy-service
+      deploy:
+        resources:
+          limits:
+            memory: 700m
+
+    microservice-configserver-config:
+      extends:
+        service: microservice-base-config
+      environment:
+        SPRING_PROFILES_ACTIVE: default
+        SPRING_CONFIG_IMPORT: configserver:http://ms-config-server:8071/
+
+    microservice-eurekaserver-config:
+      extends:
+        service: microservice-configserver-config
+      environment:
+        EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://ms-eurekaserver:8070/eureka/
+
+- default/docker-compose.yml
+
+  services:
+
+    ms-config-server:
+      image: "dhandapaniks/ms-config-server:0.0.3"
+      container_name: "ms-config-server"
+      ports:
+        - "8071:8071"
+      healthcheck:
+        test: "curl --fail --silent localhost:8071/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+        interval: 10s
+        timeout: 5s # In each check, it has to wait for 5 seconds
+        retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+        start_period: 10s # Execute health check command or api only after 10 seconds
+      extends:
+        file: common-config.yml
+        service: microservice-base-config
+      environment:
+        SPRING_APPLICATION_NAME: "ms-config-server"
+
+        
+    ms-eurekaserver:
+      image: "dhandapaniks/ms-eurekaserver:0.0.3"
+      container_name: "ms-eurekaserver"
+      ports:
+        - "8070:8070"
+      depends_on:
+        ms-config-server:
+          condition: service_healthy
+      healthcheck:
+        test: "curl --fail --silent localhost:8070/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+        interval: 10s
+        timeout: 5s # In each check, it has to wait for 5 seconds
+        retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+        start_period: 10s # Execute health check command or api only after 10 seconds
+      extends:
+        file: common-config.yml
+        service: microservice-configserver-config
+      environment:
+        SPRING_APPLICATION_NAME: "ms-eurekaserver"
+
+    ms-accounts:
+      image: "dhandapaniks/ms-accounts:0.0.3"
+      container_name: "ms-accounts"
+      ports:
+        - "8080:8080"
+      depends_on:
+        ms-config-server:
+          condition: service_healthy
+        ms-eurekaserver:
+          condition: service_healthy
+      environment:
+        SPRING_APPLICATION_NAME: "ms-accounts"
+      extends:
+        file: common-config.yml
+        service: microservice-eurekaserver-config
+
+    ms-loans:
+      image: "dhandapaniks/ms-loans:0.0.3"
+      container_name: "ms-loans"
+      ports:
+        - "8090:8090"
+      depends_on:
+        ms-config-server:
+          condition: service_healthy
+        ms-eurekaserver:
+          condition: service_healthy
+      environment:
+        SPRING_APPLICATION_NAME: "ms-loans"
+      extends:
+        file: common-config.yml
+        service: microservice-eurekaserver-config
+
+    ms-cards:
+      image: "dhandapaniks/ms-cards:0.0.3"
+      container_name: "ms-cards"
+      ports:
+        - "9000:9000"
+      depends_on:
+        ms-config-server:
+          condition: service_healthy
+        ms-eurekaserver:
+          condition: service_healthy
+      environment:
+        SPRING_APPLICATION_NAME: "ms-cards"
+      extends:
+        file: common-config.yml
+        service: microservice-eurekaserver-config
+
+  networks:
+    dhandapaniks-xyzbank-msntwrk:
+      driver: "bridge"  
+
+>>> Testing Clientside Service Discovery and Load Balancing
+
+Let's test with two instances of ms-loans microservices
+
+Step 1: Update docker-compose.yml
+
+  services:
+
+    ms-config-server:
+      image: "dhandapaniks/ms-config-server:0.0.3"
+      container_name: "ms-config-server"
+      ports:
+        - "8071:8071"
+      healthcheck:
+        test: "curl --fail --silent localhost:8071/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+        interval: 10s
+        timeout: 5s # In each check, it has to wait for 5 seconds
+        retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+        start_period: 10s # Execute health check command or api only after 10 seconds
+      extends:
+        file: common-config.yml
+        service: microservice-base-config
+      environment:
+        SPRING_APPLICATION_NAME: "ms-config-server"
+
+        
+    ms-eurekaserver:
+      image: "dhandapaniks/ms-eurekaserver:0.0.3"
+      container_name: "ms-eurekaserver"
+      ports:
+        - "8070:8070"
+      depends_on:
+        ms-config-server:
+          condition: service_healthy
+      healthcheck:
+        test: "curl --fail --silent localhost:8070/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+        interval: 10s
+        timeout: 5s # In each check, it has to wait for 5 seconds
+        retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+        start_period: 10s # Execute health check command or api only after 10 seconds
+      extends:
+        file: common-config.yml
+        service: microservice-configserver-config
+      environment:
+        SPRING_APPLICATION_NAME: "ms-eurekaserver"
+
+    ms-accounts:
+      image: "dhandapaniks/ms-accounts:0.0.3"
+      container_name: "ms-accounts"
+      ports:
+        - "8080:8080"
+      depends_on:
+        ms-config-server:
+          condition: service_healthy
+        ms-eurekaserver:
+          condition: service_healthy
+      environment:
+        SPRING_APPLICATION_NAME: "ms-accounts"
+      extends:
+        file: common-config.yml
+        service: microservice-eurekaserver-config
+
+    ms-loans:
+      image: "dhandapaniks/ms-loans:0.0.3"
+      container_name: "ms-loans"
+      ports:
+        - "8090:8090"
+      depends_on:
+        ms-config-server:
+          condition: service_healthy
+        ms-eurekaserver:
+          condition: service_healthy
+      environment:
+        SPRING_APPLICATION_NAME: "ms-loans"
+      extends:
+        file: common-config.yml
+        service: microservice-eurekaserver-config
+        
+    ms-loans-2:
+      image: "dhandapaniks/ms-loans:0.0.3"
+      container_name: "ms-loans-2"
+      ports:
+        - "8091:8090"
+      depends_on:
+        ms-config-server:
+          condition: service_healthy
+        ms-eurekaserver:
+          condition: service_healthy
+      environment:
+        SPRING_APPLICATION_NAME: "ms-loans"
+      extends:
+        file: common-config.yml
+        service: microservice-eurekaserver-config
+
+    ms-cards:
+      image: "dhandapaniks/ms-cards:0.0.3"
+      container_name: "ms-cards"
+      ports:
+        - "9000:9000"
+      depends_on:
+        ms-config-server:
+          condition: service_healthy
+        ms-eurekaserver:
+          condition: service_healthy
+      environment:
+        SPRING_APPLICATION_NAME: "ms-cards"
+      extends:
+        file: common-config.yml
+        service: microservice-eurekaserver-config
+
+  networks:
+    dhandapaniks-xyzbank-msntwrk:
+      driver: "bridge"  
+
+Step 2: Start the services using docker compose up -d
+
+Step 3: Verify the instances in Eureka using the below URL
+
+http://localhost:8070/ - We can see there are two ms-loans instances
+http://localhost:8070/eureka/apps - Returns all apps detail in XML format
