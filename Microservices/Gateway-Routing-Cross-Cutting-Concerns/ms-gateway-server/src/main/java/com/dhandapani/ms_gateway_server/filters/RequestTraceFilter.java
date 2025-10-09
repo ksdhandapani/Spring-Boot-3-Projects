@@ -31,7 +31,7 @@ public class RequestTraceFilter implements GlobalFilter {
 					this.filterUtility.getCorrelationId(requestHeaders));
 		} else {
 			String correlationId = this.getCorrelationId();
-			this.filterUtility.setCorrelationId(exchange, correlationId);
+			exchange = this.filterUtility.setCorrelationId(exchange, correlationId);
 			logger.debug("xyzbank-correlation-id generated in RequestTraceFilter: {}", correlationId);
 		}
 		return chain.filter(exchange);

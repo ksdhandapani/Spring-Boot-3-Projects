@@ -1,7 +1,7 @@
 services:
 
   ms-config-server:
-    image: "dhandapaniks/ms-config-server:0.0.3"
+    image: "dhandapaniks/ms-config-server:0.0.4"
     container_name: "ms-config-server"
     ports:
       - "8071:8071"
@@ -19,7 +19,7 @@ services:
 
       
   ms-eurekaserver:
-    image: "dhandapaniks/ms-eurekaserver:0.0.3"
+    image: "dhandapaniks/ms-eurekaserver:0.0.4"
     container_name: "ms-eurekaserver"
     ports:
       - "8070:8070"
@@ -39,7 +39,7 @@ services:
       SPRING_APPLICATION_NAME: "ms-eurekaserver"
 
   ms-accounts:
-    image: "dhandapaniks/ms-accounts:0.0.3"
+    image: "dhandapaniks/ms-accounts:0.0.4"
     container_name: "ms-accounts"
     ports:
       - "8080:8080"
@@ -48,6 +48,12 @@ services:
         condition: service_healthy
       ms-eurekaserver:
         condition: service_healthy
+    healthcheck:
+      test: "curl --fail --silent localhost:8080/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+      interval: 10s
+      timeout: 5s # In each check, it has to wait for 5 seconds
+      retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+      start_period: 10s # Execute health check command or api only after 10 seconds
     environment:
       SPRING_APPLICATION_NAME: "ms-accounts"
     extends:
@@ -55,7 +61,7 @@ services:
       service: microservice-eurekaserver-config
 
   ms-loans:
-    image: "dhandapaniks/ms-loans:0.0.3"
+    image: "dhandapaniks/ms-loans:0.0.4"
     container_name: "ms-loans"
     ports:
       - "8090:8090"
@@ -64,6 +70,12 @@ services:
         condition: service_healthy
       ms-eurekaserver:
         condition: service_healthy
+    healthcheck:
+      test: "curl --fail --silent localhost:8090/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+      interval: 10s
+      timeout: 5s # In each check, it has to wait for 5 seconds
+      retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+      start_period: 10s # Execute health check command or api only after 10 seconds
     environment:
       SPRING_APPLICATION_NAME: "ms-loans"
     extends:
@@ -71,7 +83,7 @@ services:
       service: microservice-eurekaserver-config
 
   ms-cards:
-    image: "dhandapaniks/ms-cards:0.0.3"
+    image: "dhandapaniks/ms-cards:0.0.4"
     container_name: "ms-cards"
     ports:
       - "9000:9000"
@@ -80,8 +92,32 @@ services:
         condition: service_healthy
       ms-eurekaserver:
         condition: service_healthy
+    healthcheck:
+      test: "curl --fail --silent localhost:9000/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+      interval: 10s
+      timeout: 5s # In each check, it has to wait for 5 seconds
+      retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+      start_period: 10s # Execute health check command or api only after 10 seconds
     environment:
       SPRING_APPLICATION_NAME: "ms-cards"
+    extends:
+      file: common-config.yml
+      service: microservice-eurekaserver-config
+      
+  ms-gateway-server:
+    image: "dhandapaniks/ms-gateway-server:0.0.4"
+    container_name: "ms-gateway-server"
+    ports:
+      - "8072:8072"
+    depends_on:
+      ms-accounts:
+        condition: service_healthy
+      ms-loans:
+        condition: service_healthy
+      ms-cards:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_NAME: "ms-gateway-server"
     extends:
       file: common-config.yml
       service: microservice-eurekaserver-config

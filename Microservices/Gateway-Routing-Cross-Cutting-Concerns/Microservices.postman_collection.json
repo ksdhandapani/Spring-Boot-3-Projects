@@ -1659,6 +1659,35 @@
 								}
 							},
 							"response": []
+						},
+						{
+							"name": "Gateway Server - Fetch Customer Detail by Mobile Number",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:8072/xyzbank/ms-accounts/api/customers/fetch?mobileNumber=4578905467",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8072",
+									"path": [
+										"xyzbank",
+										"ms-accounts",
+										"api",
+										"customers",
+										"fetch"
+									],
+									"query": [
+										{
+											"key": "mobileNumber",
+											"value": "4578905467"
+										}
+									]
+								}
+							},
+							"response": []
 						}
 					]
 				},
@@ -1849,6 +1878,34 @@
 										"ms-cards",
 										"api",
 										"cards",
+										"fetch"
+									],
+									"query": [
+										{
+											"key": "mobileNumber",
+											"value": "4578905467"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Gateway Server - Fetch Customer Detail by Mobile Number",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:8072/ms-accounts/api/customers/fetch?mobileNumber=4578905467",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8072",
+									"path": [
+										"ms-accounts",
+										"api",
+										"customers",
 										"fetch"
 									],
 									"query": [
