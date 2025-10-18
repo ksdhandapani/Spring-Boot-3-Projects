@@ -1,0 +1,1670 @@
+******************************
+Making Microservices Resilient
+******************************
+
+Resiliency inside Microservices
+-------------------------------
+
+Resiliency is the ability or capability of any human being or system to recover from a difficult situation. Therefore, we need to design our microservices architecture and service network to be as self-resilient as possible. 
+
+>>> Understanding the need for Resiliency
+
+- How are we going to avoid Cascading Failure? 
+
+Cascading Failure - One failed or slow service should not have a ripple effect on the other microservices. Like in the scenarios of multiple microservices communicating, we need to make sure that the entire chain of microservices does not fall with the failure of a single microservice. 
+
+- How do we handle failures gracefully with fallbacks?
+
+Handle Cascading failures with Fallbacks - In a chain of multiple microservices, how do we build a fallback mechanism if one of the microservices is not working? Like returning a default value, or returning values from the cache or calling another service/DB to fetch the results, etc. 
+
+- How to make our services self-healing capable?
+
+Enabling the Self Healing capability - In the cases of slow-performing services, how do we configure timeouts, retries and give time for a failed service to recover itself? 
+
+>>> Examples
+
+- Example of Cascading Failure
+
+Apart from building the Microservices, we need to make sure that all these services are working properly together in order to generate and deliver the collective output that we are expecting. 
+
+You may have hundreds of microservices and their instances running inside a microservices network, and inside the network, you can imagine anything can happen, like one of the services may have some network disruptions, or it might be behaving slowly, or it is completely down, so for all such failures, your system should be ready by having some resiliency mechanism inside it. One of the first issues we may have is cascading failure. 
+
+Let's say our microservice network has multiple microservices and there might be a chain of communication between them, like Microservice A will call B, and B will call C, and B will wait for the output from C and A will wait for the output from B so there is a chain of communication is happening, for some reason If the Microservice C is behaving slowly or it has some network disruptions, how do we make sure that effect is not on the Microservice B and A?
+
+If Microservice C is taking a good amount of time in giving a response to Microservice B and which will eventually go to A, the thread and the resources that I have created inside Microservice B and A will keep waiting for the response, and the more and more client invocations happen, so there will be a cascading effect. 
+
+Since Microservice C is not responding quickly, more and more resources and threads will be created on Microservice B and A as well, so both Microservice B and A will also start behaving more slowly. 
+
+So to avoid this kind of cascading failure, we should have some self-healing or resiliency inside our microservices architecture. 
+
+- Example for Fallbacks (For gracefully handling failures)
+
+If there is a failure happens, how do we handle those failures gracefully? If Microservice C is not giving a response within a stipulated time, I should have a fallback mechanism. If Microservice C is not working properly, Microservice B should be smart enough to have a fallback mechanism. If Microservice C has a problem, it should have a fallback mechanism to send some default value or to send some values from the cache or from another service or database, so the approach can be anything, but it should have some fallback mechanism so that Microservice B and A do not wait and wait and which will eventually make the entire Microservice network down. 
+
+- Example of Self-Healing capability 
+
+Along with the fallback mechanism, how do we make our services self-healing capable? the might be some slow-performing services. How do we configure the timeout to decide up to what time my threads have to wait, or how do I configure retries? 
+
+In one scenario, Microservice C might have some network disruptions going on. Maybe if I make one more attempt to retry through Microservice B, it may work. So how do I try that retries inside the Microservices automatically, and at the same time, how do I give some time to the instance of Microservice which is behaving slowly without passing any further requests to it so that it can heal itself in some time? 
+
+So if there is an instance of Microservice that is already behaving slowly, and I keep sending the request, it will make things even worse, and it may go down eventually. Maybe if I give some time to that Microservice instance without passing any further requests, it may heal itself, and it may start recovering well and respond normally. 
+
+So how do we build all those self-healing capabilities inside our microservice architecture? 
+
+The solution is using "Resilience4j".
+
+>>> Resilience4j 
+
+*** Resilience4j is a lightweight, easy-to-use fault tolerance library inspired by Netflix Hystrix, but mainly designed for Java 8 and functional programming. It is very lightweight because it does not depend on any other external libraries, but in the case of Netflix Hystrix, it has a lot of dependencies on external libraries such as Guava and Apache Commons Configuration; due to this, it is very heavyweight. ***
+
+Resilience4j offers the following patterns for increasing fault tolerance due to network problems or the failure of any of the multiple services. 
+
+- Circuit Breaker: Used to stop making requests when a service invoked is failing. 
+- Fallback: Alternative paths to failing requests. 
+- Retry: Used to make retries when a service has temporarily failed.
+- Rate Limit: Limits the number of calls that a service receives at a time.
+- Bulkhead: Limits the number of outgoing concurrent requests to a service to avoid overloading. 
+
+Before using Resilience4j, Developers used to use Hystrix, one of the most common Java libraries to implement the resiliency patterns in Microservices. But now Hystrix is in maintenance mode, and no new features are being developed. Due to this reason, everyone uses Resilience4j, which has more features than Hystrix. 
+
+>>> Circuit Breaker Pattern in Microservices 
+--------------------------------------------
+
+Circuit Breaker in Electrical System:
+
+In an electrical system, a circuit breaker is a safety device designed to protect the electrical circuit from excessive current, preventing damage to the circuit or potential fire hazards. It automatically interrupts the flow of electricity when it detects a fault, such as a short circuit or overload, to ensure the safety and stability of the system.
+
+Or 
+
+The Circuit Breaker Pattern is inspired by the electrical circuit breaker. Like the electrical circuit breaker, If there is too much current is passed through the circuit, the circuit will break and it will open so that no further current will be passed to the circuit, which will eventually save it from the damage that is going to happen due to the heavy current being passed. 
+
+The Circuit Breaker pattern in software development takes its inspiration from the concept of an electrical circuit breaker found in an electrical system.
+
+Circuit Breaker Pattern in Software Development:
+
+Like in any distributed environment, there might be multiple calls happening to remote resources, and these resources can fail due to slow network connections, timeouts, or resources being overcommitted or temporarily unavailable. The scenario can be anything. So these falls typically correct themselves after a short period of time. Any robust cloud application or microservices-based application should be prepared to handle such scenarios. 
+
+Similarly, in the software circuit breaker pattern, it will monitor each and every call that is going to happen through this circuit breaker, and if the calls are taking too long, the very first thing, the circuit breaker will come into the picture, and it will kill those calls. At the same time, if the same behaviour is happening for the majority of the requests coming, it will decide and open the circuit so that no further invocations are happening to the microservice where it is behaving slowly. 
+
+Ex: So when the circuit breaker opens a network, obvioulsy our accounts and loans microservices don't have to wait till the timeout happens, they will immediately get the response because the network is open and at the same time, they can also get some default response that you might configured instead of getting it from the so and so microservice which is not working properly. 
+
+The ciruit breaker pattern is smart enough to decide when to open the circuit, like it will keep monitoring the invocations that are going through it, and if it reaches certain threshold and If identifies, suppose 50 % of the calls are gettting failed, then it will open the network and make sure no further requests are going to the affected microservice (Which is failing), so this way it is failing fast and giving a fast response whether it might be an exceptional response or default response that you configure to the service, so this way the other microservices which call the affected/failed microservice don't have to wait, which will save from the throttling scenarios on those microservices. 
+
+-- The advantages of the circuit breaker pattern 
+
+- Fail Fast
+- Fail Gracefully
+- Recover Seamlessly 
+ 
+-- Different states of the Circuit Breaker 
+
+- CLOSED: Initially, the circuit breaker starts with a Closed status and accepts the client requests
+- OPEN: If Circuit Breaker sees a threshold of requests failing, then it will OPEN the circuit, which will make requests fail fast.
+- HALF_OPEN: Periodically, Circuit Breaker checks if the issue is resolved by allowing a few requests. Based on the results, it will either go to the CLOSED or OPEN state. 
+
+CLOSED-----Failure rate above threshold-----OPEN-----After wait duration-----HALF_OPEN
+
+HALF_OPEN-----Failure rate above threshold-----OPEN
+
+HALF_OPEN-----Failure rate below threshold-----CLOSED
+
+>>> Implementing Circuit Breaker Pattern
+
+We are going to implement the Circuit Breaker Pattern at two places, one is at the Gateway and other one on the individual microservices.
+
+>>> Implementing Circuit Breaker Pattern on Gateway Server (ms-gateway-server)
+
+Step 1: Add the following dependency to ms-gateway-server
+
+    <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-circuitbreaker-reactor-resilience4j</artifactId>
+    </dependency>
+
+Step 2: Update xyzBankRouteConfig in MsGatewayServerApplication
+
+We are going to leverage one of the inbuilt filters provided by Spring Cloud Gateway which is circuitBreaker filter.
+
+    package com.dhandapani.ms_gateway_server;
+
+    import java.time.LocalDateTime;
+
+    import org.springframework.boot.SpringApplication;
+    import org.springframework.boot.autoconfigure.SpringBootApplication;
+    import org.springframework.cloud.gateway.route.RouteLocator;
+    import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
+    import org.springframework.context.annotation.Bean;
+
+    @SpringBootApplication
+    public class MsGatewayServerApplication {
+
+      public static void main(String[] args) {
+        SpringApplication.run(MsGatewayServerApplication.class, args);
+      }
+
+      @Bean
+      public RouteLocator xyzBankRouteConfig(RouteLocatorBuilder routeLocatorBuilder) {
+        return routeLocatorBuilder.routes()
+            /*
+             * After the prefix path "/xyzbank/accounts", whatever path is available, assume
+             * that it is a segment. Using the same segment value or the same path, I want
+             * the request to be forwarded to the actual microservice.
+             */
+            .route(p -> p.path("/xyzbank/ms-accounts/**")
+                .filters(f -> f.rewritePath("/xyzbank/ms-accounts/(?<segment>.*)", "/${segment}")
+                    .addResponseHeader("X-Response-Time", LocalDateTime.now().toString())
+                .circuitBreaker(config -> config.setName("ms-accounts-circuit-breaker")))
+                .uri("lb://MS-ACCOUNTS")) /* The microservice to which the request should be redirected. It should match the name that we have registered with the Eureka Server. The "lb" tells the Gateway Server to do Client Side Load Balancing with the help of Spring Cloud Load balancer.*/
+            .route(p -> p.path("/xyzbank/ms-cards/**")
+                .filters(f -> f.rewritePath("/xyzbank/ms-cards/(?<segment>.*)", "/${segment}")
+                    .addResponseHeader("X-Response-Time", LocalDateTime.now().toString()))
+                .uri("lb://MS-CARDS"))
+            .route(p -> p.path("/xyzbank/ms-loans/**")
+                .filters(f -> f.rewritePath("/xyzbank/ms-loans/(?<segment>.*)", "/${segment}")
+                    .addResponseHeader("X-Response-Time", LocalDateTime.now().toString()))
+                .uri("lb://MS-LOANS"))
+            .build();
+      }
+
+    }
+
+Step 3: Add the below properties to application.properties
+
+    # We are communicating the circuit breaker pattern on how many requests it has to initially monitor before it tries to change the status from CLOSE to OPEN. In other words, with this property, we are instructing our circuit breaker pattern to monitor at least 10 requests coming towards the services. After monitoring 10 requests, you can make a decision whether to continue with the CLOSE status or to move to the OPEN status. 
+
+    resilience4j.circuitbreaker.configs.default.slidingWindowSize=10
+
+    # Once our Circuit Breaker Pattern moves to the OPEN state, it will never be in the OPEN state forever. Periodically, it is going to move to the HALF_OPEN state, and it is going to allow a certain amount of traffic to the services, and since the pattern cannot decide how many requests it has to pass, we need to provide that information using this property.
+
+    # So here we are giving 2, which means we want our pattern to allow two requests in the HALF_OPEN state. Based upon these two requests being processed, it can decide whether to go back to the OPEN state or move to the CLOSED state.
+
+    resilience4j.circuitbreaker.configs.default.permittedNumberOfCallsInHalfOpenState=2
+
+    # If at least 50% of my requests fail, then our pattern can move to the OPEN state from the CLOSED state.
+
+    resilience4j.circuitbreaker.configs.default.failureRateThreshold=50
+
+    # Our pattern is going to wait for 10s (10000 ms) whenever it tries to move to the HALF_OPEN state and allow the partial traffic.
+
+    resilience4j.circuitbreaker.configs.default.waitDurationInOpenState=10000
+
+Step 4: Start the applications and verify the circuit breaker related URLs
+
+ms-config-server, ms-eurekaserver, ms-accounts, ms-loans, ms-cards, ms-gateway-server
+
+To see the actuator endpoints of gateway server - http://localhost:8072/actuator
+
+To see the list of circuit breakers - http://localhost:8072/actuator/circuitbreakers
+
+Initially it will return no records, you will be able to see the entries once you hit the APIs through Gateway server
+
+    {
+      "circuitBreakers": {
+        "ms-accounts-circuit-breaker": {
+          "failureRate": "-1.0%",
+          "slowCallRate": "-1.0%",
+          "failureRateThreshold": "50.0%",
+          "slowCallRateThreshold": "100.0%",
+          "bufferedCalls": 2,
+          "failedCalls": 0,
+          "slowCalls": 0,
+          "slowFailedCalls": 0,
+          "notPermittedCalls": 0,
+          "state": "CLOSED"
+        }
+      }
+    }
+
+To see the events against a cicruit breaker - http://localhost:8072/actuator/circuitbreakerevents/ms-accounts-circuit-breaker
+
+    {
+      "circuitBreakerEvents": [
+        {
+          "circuitBreakerName": "ms-accounts-circuit-breaker",
+          "type": "SUCCESS",
+          "creationTime": "2025-10-13T08:51:28.935893900+05:30[Asia/Calcutta]",
+          "errorMessage": null,
+          "durationInMs": 1081,
+          "stateTransition": null
+        },
+        {
+          "circuitBreakerName": "ms-accounts-circuit-breaker",
+          "type": "SUCCESS",
+          "creationTime": "2025-10-13T08:52:14.522655+05:30[Asia/Calcutta]",
+          "errorMessage": null,
+          "durationInMs": 25,
+          "stateTransition": null
+        }
+      ]
+    }
+
+Step 5: Add a fallback mechanism to Gateway Server (ms-gateway-server)
+
+Create a Controller class named Fallback Controller inside ms-gateway-server
+
+    package com.dhandapani.ms_gateway_server.controller;
+
+    import org.springframework.web.bind.annotation.GetMapping;
+    import org.springframework.web.bind.annotation.RestController;
+
+    import reactor.core.publisher.Mono;
+
+    @RestController
+    public class FallbackController {
+
+      @GetMapping("/contactSupport")
+      public Mono<String> contactSupport() {
+        return Mono.just("An error occurred, please try after some time or contact support.");
+      }
+    }
+
+Update xyzBankRouteConfig of MsGatewayServerApplication by including the Fallback URI related logic
+
+    package com.dhandapani.ms_gateway_server;
+
+    import java.time.LocalDateTime;
+
+    import org.springframework.boot.SpringApplication;
+    import org.springframework.boot.autoconfigure.SpringBootApplication;
+    import org.springframework.cloud.gateway.route.RouteLocator;
+    import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
+    import org.springframework.context.annotation.Bean;
+
+    @SpringBootApplication
+    public class MsGatewayServerApplication {
+
+      public static void main(String[] args) {
+        SpringApplication.run(MsGatewayServerApplication.class, args);
+      }
+
+      @Bean
+      public RouteLocator xyzBankRouteConfig(RouteLocatorBuilder routeLocatorBuilder) {
+        return routeLocatorBuilder.routes()
+            /*
+             * After the prefix path "/xyzbank/accounts", whatever path is available, assume
+             * that it is a segment. Using the same segment value or the same path, I want
+             * the request to be forwarded to the actual microservice.
+             */
+            .route(p -> p.path("/xyzbank/ms-accounts/**")
+                .filters(f -> f.rewritePath("/xyzbank/ms-accounts/(?<segment>.*)", "/${segment}")
+                    .addResponseHeader("X-Response-Time", LocalDateTime.now().toString())
+                .circuitBreaker(config -> config.setName("ms-accounts-circuit-breaker").setFallbackUri("forward:/contactSupport")))
+                .uri("lb://MS-ACCOUNTS")) /* The microservice to which the request should be redirected. It should match the name that we have registered with the Eureka Server. The "lb" tells the Gateway Server to do Client Side Load Balancing with the help of Spring Cloud Load balancer.*/
+            .route(p -> p.path("/xyzbank/ms-cards/**")
+                .filters(f -> f.rewritePath("/xyzbank/ms-cards/(?<segment>.*)", "/${segment}")
+                    .addResponseHeader("X-Response-Time", LocalDateTime.now().toString()))
+                .uri("lb://MS-CARDS"))
+            .route(p -> p.path("/xyzbank/ms-loans/**")
+                .filters(f -> f.rewritePath("/xyzbank/ms-loans/(?<segment>.*)", "/${segment}")
+                    .addResponseHeader("X-Response-Time", LocalDateTime.now().toString()))
+                .uri("lb://MS-LOANS"))
+            .build();
+      }
+
+    }
+
+Step 6: Add a debug point to the API and mimic an error from the Microservices client and verify the fallback response from Gateway Server
+
+API Call:
+
+    curl --location --request GET 'http://localhost:8072/xyzbank/ms-accounts/api/accounts/fetch?mobileNumber=4578905467' \
+    --header 'Content-Type: application/json' \
+    --data-raw '{
+        "name": "Dhandapani S",
+        "email": "dhandapani.s@email.com",
+        "mobileNumber": "4578905467"
+    }'
+
+Response:
+
+    An error occurred, please try after some time or contact support.
+
+>>> Implementing Circuit Breaker Pattern with Feign Client
+
+Since our ms-accounts microservice is invoking ms-cards and ms-loans microservices, there is a chance that any of the client microservices may respond slowly or be completely down, or there can be some network issues, then it is going to have a ripple effect on ms-accounts and from ms-accounts to ms-gateway-server. Hence, we are going to implement the Circuit Breaker Pattern on the ms-accounts service.
+
+Ref: https://docs.spring.io/spring-cloud-openfeign/docs/current/reference/html/#spring-cloud-feign-circuitbreaker
+
+Step 1: Add the following dependency to pom.xml of ms-accounts
+
+Since we have not built ms-accounts microservice based upon spring reactor, we should not use spring-cloud-starter-circuitbreaker-reactor-resilience4j, instead we should use spring-cloud-starter-circuitbreaker-resilience4j.
+
+    <!-- Circuit Breaker dependency -->
+    <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-circuitbreaker-resilience4j</artifactId>
+    </dependency>
+
+Step 2: Add the following property to application.properties of ms-accounts
+
+    ### CIRCUIT BREAKER CONFIGURATION - RESILIENCE4J
+
+    spring.cloud.openfeign.circuitbreaker.enabled=true
+
+    # We are communicating the circuit breaker pattern on how many requests it has to initially monitor before it tries to change the status from CLOSE to OPEN. In other words, with this property, we are instructing our circuit breaker pattern to monitor at least 10 requests coming towards the services. After monitoring 10 requests, you can make a decision whether to continue with the CLOSE status or to move to the OPEN status. 
+    resilience4j.circuitbreaker.configs.default.slidingWindowSize=10
+
+    # Once our Circuit Breaker Pattern moves to the OPEN state, it will never be in the OPEN state forever. Periodically, it is going to move to the HALF_OPEN state, and it is going to allow a certain amount of traffic to the services, and since the pattern cannot decide how many requests it has to pass, we need to provide that information using this property.
+    # So here we are giving 2, which means we want our pattern to allow two requests in the HALF_OPEN state. Based upon these two requests being processed, it can decide whether to go back to the OPEN state or move to the CLOSED state.
+    resilience4j.circuitbreaker.configs.default.permittedNumberOfCallsInHalfOpenState=2
+
+    # If at least 50% of my requests fail, then our pattern can move to the OPEN state from the CLOSED state.
+    resilience4j.circuitbreaker.configs.default.failureRateThreshold=50
+
+    # Our pattern is going to wait for 10s (10000 ms) whenever it tries to move to the HALF_OPEN state and allow the partial traffic.
+    resilience4j.circuitbreaker.configs.default.waitDurationInOpenState=10000
+
+Step 3: Create Fallback classes for MsCardsFeignClient and MsLoansFeignClient
+
+    package com.dhandapani.ms_accounts.service.client;
+
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.stereotype.Component;
+
+    import com.dhandapani.ms_accounts.dto.LoanDto;
+
+    @Component
+    public class MsLoansFeignClientFallback implements MsLoansFeignClient {
+
+      @Override
+      public ResponseEntity<LoanDto> fetchLoanDetailByMobileNumber(String correlationId, String mobileNumber) {
+        // TODO Auto-generated method stub
+        return null;
+      }
+
+    }
+
+    package com.dhandapani.ms_accounts.service.client;
+
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.stereotype.Component;
+
+    import com.dhandapani.ms_accounts.dto.CardDto;
+
+    @Component
+    public class MsCardsFeignClientFallback implements MsCardsFeignClient {
+
+      @Override
+      public ResponseEntity<CardDto> fetchCardByMobileNumber(String correlationId, String mobileNumber) {
+        // TODO Auto-generated method stub
+        return null;
+      }
+
+    }
+
+Step 4: Update MsCardsFeignClient and MsLoansFeignClient interfaces
+
+Include fallback details to the Feign Clients
+
+    package com.dhandapani.ms_accounts.service.client;
+
+    import org.springframework.cloud.openfeign.FeignClient;
+    import org.springframework.http.MediaType;
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.web.bind.annotation.GetMapping;
+    import org.springframework.web.bind.annotation.RequestHeader;
+    import org.springframework.web.bind.annotation.RequestParam;
+
+    import com.dhandapani.ms_accounts.dto.CardDto;
+
+    @FeignClient(name = "ms-cards", fallback = MsCardsFeignClientFallback.class)
+    public interface MsCardsFeignClient {
+
+      @GetMapping(path = "/api/cards/fetch", consumes = MediaType.APPLICATION_JSON_VALUE)
+      public ResponseEntity<CardDto> fetchCardByMobileNumber(
+          @RequestHeader("xyzbank-correlation-id") String correlationId, @RequestParam String mobileNumber);
+    }
+
+    package com.dhandapani.ms_accounts.service.client;
+
+    import org.springframework.cloud.openfeign.FeignClient;
+    import org.springframework.http.MediaType;
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.web.bind.annotation.GetMapping;
+    import org.springframework.web.bind.annotation.RequestHeader;
+    import org.springframework.web.bind.annotation.RequestParam;
+
+    import com.dhandapani.ms_accounts.dto.LoanDto;
+
+    @FeignClient(name = "ms-loans", fallback = MsLoansFeignClientFallback.class)
+    public interface MsLoansFeignClient {
+
+      @GetMapping(path = "/api/loans/fetch", consumes = MediaType.APPLICATION_JSON_VALUE)
+      public ResponseEntity<LoanDto> fetchLoanDetailByMobileNumber(
+          @RequestHeader("xyzbank-correlation-id") String correlationId, @RequestParam String mobileNumber);
+    }
+
+Step 5: Start the applications and verify the results
+
+To access Actuator endpoints of ms-accounts: http://localhost:8080/actuator
+
+To get the list of circuit breakers available on ms-accounts: http://localhost:8080/actuator/circuitbreakers
+
+    {
+      "circuitBreakers": {
+        "MsCardsFeignClientfetchCardByMobileNumberStringString": {
+          "failureRate": "-1.0%",
+          "slowCallRate": "-1.0%",
+          "failureRateThreshold": "50.0%",
+          "slowCallRateThreshold": "100.0%",
+          "bufferedCalls": 1,
+          "failedCalls": 0,
+          "slowCalls": 0,
+          "slowFailedCalls": 0,
+          "notPermittedCalls": 0,
+          "state": "CLOSED"
+        },
+        "MsLoansFeignClientfetchLoanDetailByMobileNumberStringString": {
+          "failureRate": "-1.0%",
+          "slowCallRate": "-1.0%",
+          "failureRateThreshold": "50.0%",
+          "slowCallRateThreshold": "100.0%",
+          "bufferedCalls": 1,
+          "failedCalls": 0,
+          "slowCalls": 0,
+          "slowFailedCalls": 0,
+          "notPermittedCalls": 0,
+          "state": "CLOSED"
+        }
+      }
+    }
+
+Happy path: Create an account, loan, and card for a mobile number and fetch Customer Detail by Mobile Number
+
+    curl --location 'http://localhost:8072/xyzbank/ms-accounts/api/customers/fetch?mobileNumber=4578905467'
+
+    {
+        "name": "Dhandapani S",
+        "email": "dhandapani.s@email.com",
+        "mobileNumber": "4578905467",
+        "accountDto": {
+            "accountNumber": 1674944026,
+            "accountType": "Savings",
+            "branchAddress": "123 Main Street, New York"
+        },
+        "cardDto": {
+            "mobileNumber": "4578905467",
+            "cardNumber": "100493647493",
+            "cardType": "Credit Card",
+            "totalLimit": 100000,
+            "amountUsed": 0,
+            "availableAmount": 100000
+        },
+        "loanDto": {
+            "mobileNumber": "4578905467",
+            "loanNumber": "100280013250",
+            "loanType": "Home Loan",
+            "totalLoanAmount": 100000,
+            "amountPaid": 0,
+            "outstandingAmount": 100000
+        }
+    }
+
+Negative path: Down the loan service and verify the API response
+
+    curl --location 'http://localhost:8072/xyzbank/ms-accounts/api/customers/fetch?mobileNumber=4578905467'
+
+    Since the loan service is down, we are getting null for loanDto in the API response.
+
+    {
+        "name": "Dhandapani S",
+        "email": "dhandapani.s@email.com",
+        "mobileNumber": "4578905467",
+        "accountDto": {
+            "accountNumber": 1674944026,
+            "accountType": "Savings",
+            "branchAddress": "123 Main Street, New York"
+        },
+        "cardDto": {
+            "mobileNumber": "4578905467",
+            "cardNumber": "100493647493",
+            "cardType": "Credit Card",
+            "totalLimit": 100000,
+            "amountUsed": 0,
+            "availableAmount": 100000
+        },
+        "loanDto": null
+    }
+
+Negative path: When both ms-cards and ms-loans services are down
+
+    curl --location 'http://localhost:8072/xyzbank/ms-accounts/api/customers/fetch?mobileNumber=4578905467'
+
+    {
+        "name": "Dhandapani S",
+        "email": "dhandapani.s@email.com",
+        "mobileNumber": "4578905467",
+        "accountDto": {
+            "accountNumber": 1674944026,
+            "accountType": "Savings",
+            "branchAddress": "123 Main Street, New York"
+        },
+        "cardDto": null,
+        "loanDto": null
+    }
+
+>>> Implementation: Timeout configuration on ms-gateway-server
+
+Connection timeout:
+
+- Connection timeout is the time the ms-gateway-server is going to take to get a connection thread from the other microservice
+- Suppose if the ms-gateway-server is trying to send a request to the ms-loans service, first it will try to get a connection to the ms-loans service. Sometimes, due to network problems, the time to get the connection may also take longer, so that's why we configure the connection-timeout value in milliseconds. Let's say it is configured as 1000ms, which is 1s. Within one second, if the ms-gateway-server is not able to get a connection to the ms-loans service, we are not going to wait, and we are going to kill the request. 
+
+Response timeout:
+
+- Response timeout is the maximum time that the ms-gateway-server is going to wait to receive the response from the respective microservices, like ms-cards, ms-loans, and ms-accounts. 
+
+Step 1: Add the following properties to application.properties of ms-gateway-server
+
+    spring.cloud.gateway.httpclient.connect-timeout=1000
+    spring.cloud.gateway.httpclient.response-timeout=2s
+
+Step 2: Add debug point to contact-info endpoint of ms-cards and verify the timeout behaviour
+
+The response got timed out after 2 seconds of waiting for the response from ms-cards
+
+    curl --location 'http://localhost:8072/xyzbank/ms-cards/api/cards/contact-info'
+
+    {
+        "timestamp": "2025-10-13T16:37:13.755+00:00",
+        "path": "/xyzbank/ms-cards/api/cards/contact-info",
+        "status": 504,
+        "error": "Gateway Timeout",
+        "requestId": "e4d1fdaa-19",
+        "message": "Response took longer than timeout: PT2S",
+        "trace": "org.springframework.cloud.gateway.support.TimeoutException: Response took longer than timeout: PT2S\r\n"
+    }
+
+*** Since the timeout configurations that we have configured inside the ms-gateway-server are global, they are going to be applicable for all kinds of microservices and for all kinds of paths that are travelling through the ms-gateway-server. 
+
+*** For the ms-accounts service, it may not be applicable because inside the ms-accounts service, we have configured a circuit breaker pattern, and the pattern has its own internal timeout configurations, so whenever we have this kind of scenario, the global configurations will be ignored, and whatever configurations are specific to the circuit breaker will be followed.
+
+    package com.dhandapani.ms_gateway_server;
+
+    import java.time.LocalDateTime;
+
+    import org.springframework.boot.SpringApplication;
+    import org.springframework.boot.autoconfigure.SpringBootApplication;
+    import org.springframework.cloud.gateway.route.RouteLocator;
+    import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
+    import org.springframework.context.annotation.Bean;
+
+    @SpringBootApplication
+    public class MsGatewayServerApplication {
+
+      public static void main(String[] args) {
+        SpringApplication.run(MsGatewayServerApplication.class, args);
+      }
+
+      @Bean
+      public RouteLocator xyzBankRouteConfig(RouteLocatorBuilder routeLocatorBuilder) {
+        return routeLocatorBuilder.routes()
+            /*
+             * After the prefix path "/xyzbank/accounts", whatever path is available, assume
+             * that it is a segment. Using the same segment value or the same path, I want
+             * the request to be forwarded to the actual microservice.
+             */
+            .route(p -> p.path("/xyzbank/ms-accounts/**")
+                .filters(f -> f.rewritePath("/xyzbank/ms-accounts/(?<segment>.*)", "/${segment}")
+                    .addResponseHeader("X-Response-Time", LocalDateTime.now().toString())
+                .circuitBreaker(config -> config.setName("ms-accounts-circuit-breaker").setFallbackUri("forward:/contactSupport")))
+                .uri("lb://MS-ACCOUNTS")) /* The microservice to which the request should be redirected. It should match the name that we have registered with the Eureka Server. The "lb" tells the Gateway Server to do Client Side Load Balancing with the help of Spring Cloud Load balancer.*/
+            .route(p -> p.path("/xyzbank/ms-cards/**")
+                .filters(f -> f.rewritePath("/xyzbank/ms-cards/(?<segment>.*)", "/${segment}")
+                    .addResponseHeader("X-Response-Time", LocalDateTime.now().toString()))
+                .uri("lb://MS-CARDS"))
+            .route(p -> p.path("/xyzbank/ms-loans/**")
+                .filters(f -> f.rewritePath("/xyzbank/ms-loans/(?<segment>.*)", "/${segment}")
+                    .addResponseHeader("X-Response-Time", LocalDateTime.now().toString()))
+                .uri("lb://MS-LOANS"))
+            .build();
+      }
+
+    }
+
+>>> Implementation: Per route timeout configuration on ms-gateway-server
+
+*** A per-route response-timeout with a negative value will disable the global response-timeout value.
+
+>>> Retry pattern in Microservices
+----------------------------------
+
+The retry pattern will make multiple attempts when a service has temporarily failed. This pattern is very helpful in scenarios like network disruption, where the client request may be successful after a retry attempt.
+
+Here are some key components and considerations of implementing the Retry pattern in microservices:
+
+- Retry logic: Determine when and how many times to retry an operation. This can be based on factors such as error codes, exceptions, or response status.
+
+- Backoff strategy: Define a strategy for delaying retries to avoid overwhelming the system or exacerbating the underlying issue. This strategy can involve gradually increasing the delay between each retry, known as exponential backoff.
+
+- Circuit Breaker integration: Consider combining the Retry pattern with the Circuit Breaker pattern. If a certain number of retries fail consecutively, the circuit can be opened to prevent further attempts and preserve system resources.
+
+- Idempotent operations: Ensure that the retried operation is *** idempotent ***, meaning it produces the same result regardless of how many times it is invoked. This prevents unintended side effects or duplicate operations.
+
+>>> Implementing Retry pattern in ms-gateway-server
+
+In this example, we are adding retry logic for requests which will be sent through ms-gateway-server to ms-loans and it applies to only GET operations.
+
+Step 1: Update xyzBankRouteConfig of MsGatewayServerApplication by adding retry logic for ms-loans
+
+    package com.dhandapani.ms_gateway_server;
+
+    import java.time.Duration;
+    import java.time.LocalDateTime;
+
+    import org.springframework.boot.SpringApplication;
+    import org.springframework.boot.autoconfigure.SpringBootApplication;
+    import org.springframework.cloud.gateway.route.RouteLocator;
+    import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
+    import org.springframework.context.annotation.Bean;
+    import org.springframework.http.HttpMethod;
+
+
+    @SpringBootApplication
+    public class MsGatewayServerApplication {
+
+      public static void main(String[] args) {
+        SpringApplication.run(MsGatewayServerApplication.class, args);
+      }
+
+      @Bean
+      public RouteLocator xyzBankRouteConfig(RouteLocatorBuilder routeLocatorBuilder) {
+        return routeLocatorBuilder.routes()
+            /*
+             * After the prefix path "/xyzbank/accounts", whatever path is available, assume
+             * that it is a segment. Using the same segment value or the same path, I want
+             * the request to be forwarded to the actual microservice.
+             */
+            .route(p -> p.path("/xyzbank/ms-accounts/**")
+                .filters(f -> f.rewritePath("/xyzbank/ms-accounts/(?<segment>.*)", "/${segment}")
+                    .addResponseHeader("X-Response-Time", LocalDateTime.now().toString())
+                .circuitBreaker(config -> config.setName("ms-accounts-circuit-breaker").setFallbackUri("forward:/contactSupport")))
+                .uri("lb://MS-ACCOUNTS")) /* The microservice to which the request should be redirected. It should match the name that we have registered with the Eureka Server. The "lb" tells the Gateway Server to do Client Side Load Balancing with the help of Spring Cloud Load balancer.*/
+            .route(p -> p.path("/xyzbank/ms-cards/**")
+                .filters(f -> f.rewritePath("/xyzbank/ms-cards/(?<segment>.*)", "/${segment}")
+                    .addResponseHeader("X-Response-Time", LocalDateTime.now().toString()))
+                .uri("lb://MS-CARDS"))
+            .route(p -> p.path("/xyzbank/ms-loans/**")
+                .filters(f -> f.rewritePath("/xyzbank/ms-loans/(?<segment>.*)", "/${segment}")
+                    .addResponseHeader("X-Response-Time", LocalDateTime.now().toString())
+                    .retry(retryConfig -> retryConfig.setRetries(3).setMethods(HttpMethod.GET).setBackoff(Duration.ofMillis(100), Duration.ofMillis(1000), 2, true)))
+                .uri("lb://MS-LOANS"))
+            .build();
+      }
+
+    }
+
+Step 2: In ms-loans, add a break point inside contact-info API
+
+  @Operation(summary = "Get Contact Info", description = "Get Contact Information for loans-ms")
+  @ApiResponses({ @ApiResponse(responseCode = "200", description = "HTTP Status OK"),
+      @ApiResponse(responseCode = "500", description = "HTTP Status Internal Server Error", content = @Content(schema = @Schema(implementation = ErrorResponseDto.class))) })
+  @GetMapping(path = "/contact-info")
+  public ResponseEntity<LoanContactInfoDto> getContactInfo() {
+    logger.debug("Fetching Loan Contact Info");
+    return ResponseEntity.status(HttpStatus.OK).body(loanContactInfoDto);
+  }
+
+  Break point is added at line "return ResponseEntity.status(HttpStatus.OK).body(loanContactInfoDto);"
+
+Step 3: Now call the ms-loans's contact-info API through ms-gateway-server and verify retries are done by the ms-gateway-server
+
+curl --location 'http://localhost:8072/xyzbank/ms-loans/api/loans/contact-info'
+
+{
+    "timestamp": "2025-10-14T01:44:54.747+00:00",
+    "path": "/xyzbank/ms-loans/api/loans/contact-info",
+    "status": 504,
+    "error": "Gateway Timeout",
+    "requestId": "da4832a6-1",
+    "message": "Response took longer than timeout: PT2S",
+    "trace": "org.springframework.cloud.gateway.support.TimeoutException: Response took longer than timeout: PT2S\r\n"
+}
+
+Response time: 9.35 s
+
+Logs from ms-loans:
+
+    [2m--- [ms-loans] [nio-8090-exec-1] [0;39m[36mc.d.ms_loans.controller.LoanController  [0;39m [2m:[0;39m Fetching Loan Contact Info
+    [2m2025-10-14T07:14:48.069+05:30[0;39m [32mDEBUG[0;39m [35m29176[0;39m [2m--- [ms-loans] [nio-8090-exec-2] [0;39m[36mc.d.ms_loans.controller.LoanController  [0;39m [2m:[0;39m Fetching Loan Contact Info
+    [2m2025-10-14T07:14:50.287+05:30[0;39m [32mDEBUG[0;39m [35m29176[0;39m [2m--- [ms-loans] [nio-8090-exec-3] [0;39m[36mc.d.ms_loans.controller.LoanController  [0;39m [2m:[0;39m Fetching Loan Contact Info
+    [2m2025-10-14T07:14:52.719+05:30[0;39m [32mDEBUG[0;39m [35m29176[0;39m [2m--- [ms-loans] [nio-8090-exec-4] [0;39m[36mc.d.ms_loans.controller.LoanController  [0;39m [2m:[0;39m Fetching Loan Contact Info
+
+By looking at the logs we can confirm that the contact-ino API got invoked multiple times as per our retry configuration for ms-loans on ms-gateway-server.
+
+>>> Implementation of Retry pattern inside ms-accounts
+
+We are going to use /build-info API for implementing Retry pattern
+
+Rules for implementing fallback methods:
+
+- The fallback method's signature should match exactly with the original method's signature.
+- The fallback mehtod should accept an input parameter of type Throwable
+
+
+Step 1: Update the implementation of getBuildInfo API available inside AccountsContoller
+
+    @Operation(summary = "Get Build Information", description = "Get Build Information that is deployed into accounts-ms")
+    @ApiResponses({ @ApiResponse(responseCode = "200", description = "HTTP Status OK"),
+        @ApiResponse(responseCode = "500", description = "HTTP Status Internal Server Error", content = @Content(schema = @Schema(implementation = ErrorResponseDto.class))) })
+    @Retry(name = "getBuildInfo", fallbackMethod = "getBuildInfoFallback")
+    @GetMapping("/build-info")
+    public ResponseEntity<String> getBuildInfo() {
+      return ResponseEntity.status(HttpStatus.OK).body(buildVersion);
+    }
+
+    public ResponseEntity<String> getBuildInfoFallback(Throwable throwable) {
+      logger.debug("getBuildInfo service is down at {}, hence invoking fallback method", System.currentTimeMillis());
+      return ResponseEntity.status(HttpStatus.OK).body("0.1");
+    }
+
+Step 2: Add the following properties to application.properties of ms-accounts
+
+### RETRY CONFIGURATION - RESILIENCE4J
+
+# We are communicating the retry pattern on how many attempts it has to make before it gives up
+resilience4j.retry.configs.default.max-attempts=3
+# We are communicating the retry pattern to wait for 100ms between each retry attempt
+resilience4j.retry.configs.default.wait-duration=100
+# Enabling Exponential Backoff for Retry Pattern
+resilience4j.retry.configs.default.enable-exponential-backoff=true
+# Multiplier used for Exponential Backoff to increase the wait time after each retry
+# Factor by which the wait duration increases after each retry attempt (e.g., 100ms, 200ms, 400ms)
+resilience4j.retry.configs.default.exponential-backoff-multiplier=2
+
+Step 3: Update the implementation of getBuildInfo API available inside AccountsContoller, intentionally throw an error to test the Retry pattern logic
+
+      @Operation(summary = "Get Build Information", description = "Get Build Information that is deployed into accounts-ms")
+      @ApiResponses({ @ApiResponse(responseCode = "200", description = "HTTP Status OK"),
+          @ApiResponse(responseCode = "500", description = "HTTP Status Internal Server Error", content = @Content(schema = @Schema(implementation = ErrorResponseDto.class))) })
+      @Retry(name = "getBuildInfo", fallbackMethod = "getBuildInfoFallback")
+      @GetMapping("/build-info")
+      public ResponseEntity<String> getBuildInfo() {
+        logger.debug("Invoked getBuildInfo at {}", System.currentTimeMillis());
+        throw new NullPointerException("Simulated service failure to test Retry pattern");
+        // return ResponseEntity.status(HttpStatus.OK).body(buildVersion);
+      }
+
+Step 4: Invoke the /build-info API of ms-accounts service and verify Retry logic
+
+    curl --location 'http://localhost:8072/xyzbank/ms-accounts/api/accounts/build-info'
+
+    Response: 0.1
+
+Logs of ms-accounts:
+
+    [2m2025-10-14T08:01:40.493+05:30[0;39m [32mDEBUG[0;39m [35m31124[0;39m [2m--- [ms-accounts] [nio-8080-exec-1] [0;39m[36mc.d.m.controller.AccountController      [0;39m [2m:[0;39m Invoked getBuildInfo at 1760409100493
+    [2m2025-10-14T08:01:40.609+05:30[0;39m [32mDEBUG[0;39m [35m31124[0;39m [2m--- [ms-accounts] [nio-8080-exec-1] [0;39m[36mc.d.m.controller.AccountController      [0;39m [2m:[0;39m Invoked getBuildInfo at 1760409100609
+    [2m2025-10-14T08:01:40.825+05:30[0;39m [32mDEBUG[0;39m [35m31124[0;39m [2m--- [ms-accounts] [nio-8080-exec-1] [0;39m[36mc.d.m.controller.AccountController      [0;39m [2m:[0;39m Invoked getBuildInfo at 1760409100825
+    [2m2025-10-14T08:01:40.827+05:30[0;39m [32mDEBUG[0;39m [35m31124[0;39m [2m--- [ms-accounts] [nio-8080-exec-1] [0;39m[36mc.d.m.controller.AccountController      [0;39m [2m:[0;39m getBuildInfo service is down at 1760409100827, hence invoking fallback method
+
+>>> Implementation: Changing the default configuration of Circuit Breaker inside the ms-gateway-server
+
+As of now, we have enabled the circuit breaker pattern only for ms-accounts
+
+- Rate Limiter Pattern: Time Limiter is another pattern inside Resilience4j, which will help us define the maximum time our application is going to wait to complete a specific operation. 
+
+Step 1: Add the below bean configuration inside ms-gateway-server's main class MsGatewayServerApplication
+
+    @Bean
+    public Customizer<ReactiveResilience4JCircuitBreakerFactory> defaultCustomizer() {
+      return factory -> factory.configureDefault(id -> new Resilience4JConfigBuilder(id)
+          .circuitBreakerConfig(CircuitBreakerConfig.ofDefaults())
+          .timeLimiterConfig(TimeLimiterConfig.custom().timeoutDuration(Duration.ofSeconds(4)).build()).build());
+    }
+
+    package com.dhandapani.ms_gateway_server;
+
+    import java.time.Duration;
+    import java.time.LocalDateTime;
+
+    import org.springframework.boot.SpringApplication;
+    import org.springframework.boot.autoconfigure.SpringBootApplication;
+    import org.springframework.cloud.circuitbreaker.resilience4j.ReactiveResilience4JCircuitBreakerFactory;
+    import org.springframework.cloud.circuitbreaker.resilience4j.Resilience4JConfigBuilder;
+    import org.springframework.cloud.client.circuitbreaker.Customizer;
+    import org.springframework.cloud.gateway.route.RouteLocator;
+    import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
+    import org.springframework.context.annotation.Bean;
+    import org.springframework.http.HttpMethod;
+
+    import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
+    import io.github.resilience4j.timelimiter.TimeLimiterConfig;
+
+
+    @SpringBootApplication
+    public class MsGatewayServerApplication {
+
+      public static void main(String[] args) {
+        SpringApplication.run(MsGatewayServerApplication.class, args);
+      }
+
+      @Bean
+      public RouteLocator xyzBankRouteConfig(RouteLocatorBuilder routeLocatorBuilder) {
+        return routeLocatorBuilder.routes()
+            /*
+             * After the prefix path "/xyzbank/accounts", whatever path is available, assume
+             * that it is a segment. Using the same segment value or the same path, I want
+             * the request to be forwarded to the actual microservice.
+             */
+            .route(p -> p.path("/xyzbank/ms-accounts/**")
+                .filters(f -> f.rewritePath("/xyzbank/ms-accounts/(?<segment>.*)", "/${segment}")
+                    .addResponseHeader("X-Response-Time", LocalDateTime.now().toString())
+                .circuitBreaker(config -> config.setName("ms-accounts-circuit-breaker").setFallbackUri("forward:/contactSupport")))
+                .uri("lb://MS-ACCOUNTS")) /* The microservice to which the request should be redirected. It should match the name that we have registered with the Eureka Server. The "lb" tells the Gateway Server to do Client Side Load Balancing with the help of Spring Cloud Load balancer.*/
+            .route(p -> p.path("/xyzbank/ms-cards/**")
+                .filters(f -> f.rewritePath("/xyzbank/ms-cards/(?<segment>.*)", "/${segment}")
+                    .addResponseHeader("X-Response-Time", LocalDateTime.now().toString()))
+                .uri("lb://MS-CARDS"))
+            .route(p -> p.path("/xyzbank/ms-loans/**")
+                .filters(f -> f.rewritePath("/xyzbank/ms-loans/(?<segment>.*)", "/${segment}")
+                    .addResponseHeader("X-Response-Time", LocalDateTime.now().toString())
+                    .retry(retryConfig -> retryConfig.setRetries(3).setMethods(HttpMethod.GET).setBackoff(Duration.ofMillis(100), Duration.ofMillis(1000), 2, true)))
+                .uri("lb://MS-LOANS"))
+            .build();
+      }
+      
+      @Bean
+      public Customizer<ReactiveResilience4JCircuitBreakerFactory> defaultCustomizer() {
+        return factory -> factory.configureDefault(id -> new Resilience4JConfigBuilder(id)
+            .circuitBreakerConfig(CircuitBreakerConfig.ofDefaults())
+            /* This is the time limit that the circuit breaker must follow; we are setting the timeout duration to 4 seconds. With this, our circuit breaker pattern is going to wait for a maximum of 4 seconds whenever it is trying to wait for a particular operation to complete. */
+            .timeLimiterConfig(TimeLimiterConfig.custom().timeoutDuration(Duration.ofSeconds(4)).build()).build());
+      }
+
+    }
+
+>>> Implementation: Restricting Retry for specific exceptions
+
+Step 1: Add the following property to application.properties of ms-accounts
+
+    # We are communicating the retry pattern to ignore the below exception and not to retry if this exception occurs
+    resilience4j.retry.configs.default.ignore-exceptions=java.lang.NullPointerException
+
+Step 2: Verify retry is not happening when NullPointException is thrown
+
+  AccountController.java
+
+      @Operation(summary = "Get Build Information", description = "Get Build Information that is deployed into accounts-ms")
+      @ApiResponses({ @ApiResponse(responseCode = "200", description = "HTTP Status OK"),
+          @ApiResponse(responseCode = "500", description = "HTTP Status Internal Server Error", content = @Content(schema = @Schema(implementation = ErrorResponseDto.class))) })
+      @Retry(name = "getBuildInfo", fallbackMethod = "getBuildInfoFallback")
+      @GetMapping("/build-info")
+      public ResponseEntity<String> getBuildInfo() {
+        logger.debug("Invoked getBuildInfo at {}", System.currentTimeMillis());
+        throw new NullPointerException("Simulated service failure to test Retry pattern");
+    //    return ResponseEntity.status(HttpStatus.OK).body(buildVersion);
+      }
+
+      public ResponseEntity<String> getBuildInfoFallback(Throwable throwable) {
+        logger.debug("getBuildInfo service is down at {}, hence invoking fallback method", System.currentTimeMillis());
+        return ResponseEntity.status(HttpStatus.OK).body("0.1");
+      }
+
+API Call: Invoking the API through ms-gateway-server endpoint
+
+    curl --location 'http://localhost:8072/xyzbank/ms-accounts/api/accounts/build-info'
+
+Response:
+
+  0.1
+
+Logs of ms-accounts: In the logs we can see that retry was not happened
+
+    [2m2025-10-14T10:12:38.101+05:30[0;39m [32mDEBUG[0;39m [35m12376[0;39m [2m--- [ms-accounts] [nio-8080-exec-1] [0;39m[36mc.d.m.controller.AccountController      [0;39m [2m:[0;39m Invoked getBuildInfo at 1760416958101
+    [2m2025-10-14T10:12:38.105+05:30[0;39m [32mDEBUG[0;39m [35m12376[0;39m [2m--- [ms-accounts] [nio-8080-exec-1] [0;39m[36mc.d.m.controller.AccountController      [0;39m [2m:[0;39m getBuildInfo service is down at 1760416958105, hence invoking fallback method
+
+>>> Implementation: Retry only for specific exceptions
+
+Step 1: Add the following property to application.properties of ms-accounts
+
+    # We are communicating the retry pattern to retry if any of the below exceptions occur
+    resilience4j.retry.configs.default.retry-exceptions=java.util.concurrent.TimeoutException
+
+*** When we define value for "resilience4j.retry.configs.default.retry-exceptions", we do not need to define value for "resilience4j.retry.configs.default.ignore-exceptions", we can completely ignore this key.
+
+Step 2: Update the implementation of /build-info (ms-accounts) to throw TimeoutException to verify the retry behaviour
+
+    @Operation(summary = "Get Build Information", description = "Get Build Information that is deployed into accounts-ms")
+    @ApiResponses({ @ApiResponse(responseCode = "200", description = "HTTP Status OK"),
+        @ApiResponse(responseCode = "500", description = "HTTP Status Internal Server Error", content = @Content(schema = @Schema(implementation = ErrorResponseDto.class))) })
+    @Retry(name = "getBuildInfo", fallbackMethod = "getBuildInfoFallback")
+    @GetMapping("/build-info")
+    public ResponseEntity<String> getBuildInfo() throws TimeoutException {
+      logger.debug("Invoked getBuildInfo at {}", System.currentTimeMillis());
+      throw new TimeoutException("Simulated service timeout to test Retry pattern");
+  //    return ResponseEntity.status(HttpStatus.OK).body(buildVersion);
+    }
+
+    public ResponseEntity<String> getBuildInfoFallback(Throwable throwable) {
+      logger.debug("getBuildInfo service is down at {}, hence invoking fallback method", System.currentTimeMillis());
+      return ResponseEntity.status(HttpStatus.OK).body("0.1");
+    }
+
+Step 3: Restart the services, make the API call and verify the response and logs of ms-accounts
+
+We can see that the retry happened 3 times.
+
+API Call: curl --location 'http://localhost:8072/xyzbank/ms-accounts/api/accounts/build-info'
+
+Response: 0.1
+
+Logs of ms-accounts:
+
+    [2m2025-10-14T10:48:19.939+05:30[0;39m [32m INFO[0;39m [35m12376[0;39m [2m--- [ms-accounts] [nio-8080-exec-1] [0;39m[36mo.s.web.servlet.DispatcherServlet       [0;39m [2m:[0;39m Completed initialization in 3 ms
+    [2m2025-10-14T10:48:19.952+05:30[0;39m [32mDEBUG[0;39m [35m12376[0;39m [2m--- [ms-accounts] [nio-8080-exec-1] [0;39m[36mc.d.m.controller.AccountController      [0;39m [2m:[0;39m Invoked getBuildInfo at 1760419099952
+    [2m2025-10-14T10:48:20.062+05:30[0;39m [32mDEBUG[0;39m [35m12376[0;39m [2m--- [ms-accounts] [nio-8080-exec-1] [0;39m[36mc.d.m.controller.AccountController      [0;39m [2m:[0;39m Invoked getBuildInfo at 1760419100062
+    [2m2025-10-14T10:48:20.267+05:30[0;39m [32mDEBUG[0;39m [35m12376[0;39m [2m--- [ms-accounts] [nio-8080-exec-1] [0;39m[36mc.d.m.controller.AccountController      [0;39m [2m:[0;39m Invoked getBuildInfo at 1760419100267
+    [2m2025-10-14T10:48:20.269+05:30[0;39m [32mDEBUG[0;39m [35m12376[0;39m [2m--- [ms-accounts] [nio-8080-exec-1] [0;39m[36mc.d.m.controller.AccountController      [0;39m [2m:[0;39m getBuildInfo service is down at 1760419100269, hence invoking fallback method
+
+>>> Rate Limiter Pattern in Microservices
+-----------------------------------------
+
+Rate Limiter pattern in microservices is a design pattern that helps control and limit the rate of incoming requests to a service or API. It is used to prevent abuse, protect system resources, and ensure fair usage of the service.
+
+In a microservices architecture, multiple services may depend on each other and make requests to communicate. However, unrestricted and uncontrolled requests can lead to performance degradation, resource exhaustion, and potential denial of service attacks.
+
+The Rate Limiter pattern provides a mechanism to enforce limits on the rate of incoming requests.
+
+Dos (Denial of Service) attack:
+A single malicious user or a hacker is trying to send continuous requests to your server so that they can bring down your microservices and their network.
+
+Implementing the Rate Limiter pattern helps protect microservices from being overwhelmed by excessive or malicious requests. It ensures the stability, performance, and availability of the system while providing controlled access to resources. By enforcing rate limits, the Rate Limiter Pattern helps maintain a fair and reliable environment for both the service provider and its consumers.
+
+When a user surpasses the permitted number of requests within a designated time frame, any additional requests are declined with an HTTP "429 - Too Many Requests" status. The specific limit is enforced based on a chosen strategy, such as limiting requests per session, IP address, user, or tenant. The primary objective is to maintain system availability for all users, especially during challenging circumstances. This exemplifies the essence of resilience. Additionally, *** the Rate Limiter pattern proves beneficial for providing services to users based on their subscription tiers. For instance, distinct rate limits can be defined for basic, premium, and enterprise users ***.
+
+>>> KeyResolver interface:
+
+When we want to implement the RateLimiter pattern, we need a Key Resolver. Using the KeyResolver parameter, we are going to tell the Gateway Server or RateLimiter pattern what the criteria are that we want to enforce this rate limit. It can be based on user or session, or IP address or based on the server. Based on our requirement, we need to provide the details with the help of the KeyResolved interface.
+
+The default implementation of KeyResolver is the PrincipalNameKeyResolver, which retrieves the Principal from the ServerWebExchange and calls Principal.getName().
+
+>>> Redis RateLimiter:
+
+Redis Server is a cache-based storage system. Using Redis, we can also implement RateLimiter.
+
+We need to use the spring-boot-starter-data-redis-reactive dependency for the implementation, and it uses the Token Bucket Algorithm. To this algorithm, we need to pass the following 3 properties:
+
+redis-rate-limiter.replenishRate - Defines how many requests per second to allow; this is the rate at which the token bucket is filled.
+
+Example: If you define 100, that means for every one second, behind the scenes, 100 tokens will be added to your bucket. So, if you wait for two seconds and if you are not consuming anything, then your bucket will have 200 requests, and every bucket is assigned to a user or any other criteria based upon how you have defined the KeyResolver.
+
+redis-rate-limiter.burstCapacity - Defines the maximum number of requests a user is allowed in a single second; this is the number of tokens the token bucket can hold. Setting this to zero will block all requests.
+
+Example: With the help of replenishRate, we will keep adding the number of requests per second. If my replenishRate is 100 per second, after 10 seconds if my end user is not using anything within this 10 seconds, the bucket is going to have 1000 requests and if you keep filling it, at some point of time, he will millions of requests in his bucket, so to avoid this kind of overfilling the bucket with the large number of values, we are going to set the burst capacity. Using this property, we are going to set the number of tokens the bucket can hold.
+
+If we set 200 as the burstCapacity, after two seconds, our replenishRate is going to fill 200 tokens, and from the third second, if our end user is not using any of the tokens present inside his bucket, then since the bucket is already full, the replenishTate cannot add more tokens.
+
+redis-rate-limiter.requestedTokens - Defines how many tokens a request costs. This is the number of tokens taken from the bucket for each request and defaults to 1.
+
+A steady rate is accomplished by setting the same value in replenishRate and burstCapacity, for example, if you keep burstCapacity as 200 and a replenishRate as 100, then that means in the first second, even though the end user is not able to use his tokens, in the second second, he should be able to use all his 200 token at a time, so that's how we need to handle hte temporary burst. 
+
+Temporary bursts can be allowed by setting burstCapacity higher than replenishRate.
+
+Example requirement: Setting replenishRate=1, requestedTokens=60, and burstCapacity=60 results in 1 request/min.
+
+Ref: https://docs.spring.io/spring-cloud-gateway/reference/spring-cloud-gateway-server-webflux/gatewayfilter-factories/requestratelimiter-factory.html
+
+>>> Implementing RateLimiter pattern in Gateway Server (ms-gateway-server)
+
+Step 1: Add the following dependency to pom.xml file
+
+    <!-- Redis dependency to implement RateLimiter pattern -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-data-redis-reactive</artifactId>
+    </dependency>
+
+Step 2: Create the RedisRateLimiter and KeyResolver beans inside MsGatewayServerApplication and add RateLimiter filter to ms-cards service's routing configuration
+
+    package com.dhandapani.ms_gateway_server;
+
+    import java.time.Duration;
+    import java.time.LocalDateTime;
+
+    import org.springframework.boot.SpringApplication;
+    import org.springframework.boot.autoconfigure.SpringBootApplication;
+    import org.springframework.cloud.circuitbreaker.resilience4j.ReactiveResilience4JCircuitBreakerFactory;
+    import org.springframework.cloud.circuitbreaker.resilience4j.Resilience4JConfigBuilder;
+    import org.springframework.cloud.client.circuitbreaker.Customizer;
+    import org.springframework.cloud.gateway.filter.ratelimit.KeyResolver;
+    import org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter;
+    import org.springframework.cloud.gateway.route.RouteLocator;
+    import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
+    import org.springframework.context.annotation.Bean;
+    import org.springframework.http.HttpMethod;
+
+    import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
+    import io.github.resilience4j.timelimiter.TimeLimiterConfig;
+    import reactor.core.publisher.Mono;
+
+    @SpringBootApplication
+    public class MsGatewayServerApplication {
+
+      public static void main(String[] args) {
+        SpringApplication.run(MsGatewayServerApplication.class, args);
+      }
+
+      @Bean
+      public RouteLocator xyzBankRouteConfig(RouteLocatorBuilder routeLocatorBuilder) {
+        return routeLocatorBuilder.routes()
+            /*
+             * After the prefix path "/xyzbank/accounts", whatever path is available, assume
+             * that it is a segment. Using the same segment value or the same path, I want
+             * the request to be forwarded to the actual microservice.
+             */
+            .route(p -> p.path("/xyzbank/ms-accounts/**")
+                .filters(
+                    f -> f.rewritePath("/xyzbank/ms-accounts/(?<segment>.*)", "/${segment}")
+                        .addResponseHeader("X-Response-Time", LocalDateTime.now().toString())
+                        .circuitBreaker(config -> config.setName("ms-accounts-circuit-breaker")
+                            .setFallbackUri("forward:/contactSupport")))
+                .uri("lb://MS-ACCOUNTS")) /*
+                               * The microservice to which the request should be redirected. It
+                               * should match the name that we have registered with the Eureka
+                               * Server. The "lb" tells the Gateway Server to do Client Side Load
+                               * Balancing with the help of Spring Cloud Load balancer.
+                               */
+            .route(p -> p.path("/xyzbank/ms-cards/**")
+                .filters(f -> f.rewritePath("/xyzbank/ms-cards/(?<segment>.*)", "/${segment}")
+                    .addResponseHeader("X-Response-Time", LocalDateTime.now().toString())
+                    /*
+                     * Rate Limiter filter configuration. Here we are setting the RedisRateLimiter
+                     * and the KeyResolver
+                     */
+                    .requestRateLimiter(config -> config.setRateLimiter(redisRateLimiter())
+                        .setKeyResolver(userKeyResolver())))
+                .uri("lb://MS-CARDS"))
+            .route(p -> p.path("/xyzbank/ms-loans/**")
+                .filters(f -> f.rewritePath("/xyzbank/ms-loans/(?<segment>.*)", "/${segment}")
+                    .addResponseHeader("X-Response-Time", LocalDateTime.now().toString())
+                    .retry(retryConfig -> retryConfig.setRetries(3).setMethods(HttpMethod.GET)
+                        .setBackoff(Duration.ofMillis(100), Duration.ofMillis(1000), 2, true)))
+                .uri("lb://MS-LOANS"))
+            .build();
+      }
+
+      @Bean
+      public Customizer<ReactiveResilience4JCircuitBreakerFactory> defaultCustomizer() {
+        return factory -> factory.configureDefault(id -> new Resilience4JConfigBuilder(id)
+            .circuitBreakerConfig(CircuitBreakerConfig.ofDefaults())
+            /*
+             * This is the time limit that the circuit breaker must follow; we are setting
+             * the timeout duration to 4 seconds. With this, our circuit breaker pattern is
+             * going to wait for a maximum of 4 seconds whenever it is trying to wait for a
+             * particular operation to complete.
+             */
+            .timeLimiterConfig(TimeLimiterConfig.custom().timeoutDuration(Duration.ofSeconds(4)).build()).build());
+      }
+
+      /**
+       * Here we are configuring the RedisRateLimiter. The three parameters that we are
+       * passing to the RedisRateLimiter constructor are:
+       * 
+       * 1. Replenish Rate: It is the number of requests that we want to allow per
+       * second. Here we are allowing only one request per second.
+       * 
+       * 2. Burst Capacity: It is the maximum number of requests that can be allowed
+       * during a burst. Here we are allowing only one request.
+       * 
+       * 3. Requested Tokens: It is the number of tokens that should be requested for
+       * each request. Here we are requesting one token for each request.
+       */
+      @Bean
+      public RedisRateLimiter redisRateLimiter() {
+        return new RedisRateLimiter(1, 1, 1);
+      }
+
+      /**
+       * We are fetching the request header with the name 'user' from the request, and
+       * based on the header value, we are creating a KeyResolver. If someone is not
+       * sending the 'user' header in the request, we are assigning a default value,
+       * which is 'anonymous'.
+       */
+      @Bean
+      KeyResolver userKeyResolver() {
+        return exchange -> Mono.justOrEmpty(exchange.getRequest().getHeaders().getFirst("user"))
+            .defaultIfEmpty("anonymous");
+      }
+    }
+
+Step 3: Set up Redis database or container
+
+Start the Redis database or container to maintain the creation of buckets with username and all other configurations
+
+We are going to use Docker for creating a Redis database/container.
+
+Use the following command to create a container using the image redis
+
+    docker run -p 6379:6379 --name xyzbank-redis -d redis - Execute this command on terminal which will start the container behind the scenes.
+
+Verify the image and container creation using the following commands
+
+    PS C:\Users\sudha> docker images -a
+    REPOSITORY                       TAG       IMAGE ID       CREATED        SIZE
+    redis                            latest    3bd8c109f88b   13 days ago    137MB
+    dhandapaniks/ms-accounts         0.0.4     3c723bf67f56   55 years ago   383MB
+    dhandapaniks/ms-gateway-server   0.0.4     69f7f5c79255   55 years ago   345MB
+    dhandapaniks/ms-config-server    0.0.4     71f7ad62371b   55 years ago   337MB
+    dhandapaniks/ms-cards            0.0.4     a48b4470a8e0   55 years ago   383MB
+    dhandapaniks/ms-loans            0.0.4     aa012d681a07   55 years ago   383MB
+    dhandapaniks/ms-eurekaserver     0.0.4     f2c2a34b94fe   55 years ago   351MB
+
+    PS C:\Users\sudha> docker ps -a
+    CONTAINER ID   IMAGE     COMMAND                  CREATED         STATUS         PORTS                                         NAMES
+    cb5ab4a98f41   redis     "docker-entrypoint.s…"   4 minutes ago   Up 4 minutes   0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp   xyzbank-redis
+
+Step 4: Add redis connection details to the application.properties of ms-gateway-server
+
+    spring.data.redis.connect-timeout=2s
+    spring.data.host=localhost
+    spring.data.port=6379
+    spring.timeout=1s
+
+Step 5: Start the applications (ms-config-server, ms-eurekaserver, ms-cards, and ms-gateway-server) and test the RateLimiter pattern
+
+In order to test the RateLimiter pattern applied to ms-cards servie, we need to send a lot many requests within a single second so that we can see what is happening behind the scenes. As per our current configuration, we are allowing only one request per second.
+
+To perform the load testing, we are going to use Apache Benchmark project.
+
+Information about downloading and installing Apache benchmark can be found here - https://dev.to/gabriellaamah/load-testing-for-api-with-apache-benchmark-on-windows-58oj
+
+Ref:
+
+https://www.apachelounge.com/download/
+https://httpd.apache.org/docs/2.4/programs/ab.html
+https://dev.to/gabriellaamah/load-testing-for-api-with-apache-benchmark-on-windows-58oj
+
+After installing Apache Bench, run the following command from the Apache24\bin folder where we have ab executable file.
+
+    ./ab -n 10 -c 2 -v 3 http://localhost:8072/xyzbank/ms-cards/api/cards/contact-info
+
+-c Concurrency - This indicates the number of multiple requests to make at a time. For this test, we are sending 10 requests to our server and 2 requests concurrently at the same time (Instead of sending the 10 requests one by one, we want our bench mark to send 2 requests concurrently at a time).
+
+-n Request - This indicates the number of requests to perform.
+-v 3 Indicates verbose to see detailed report in the output.
+
+    PS C:\Users\sudha\Downloads\httpd-2.4.65-250724-Win64-VS17\Apache24\bin> ./ab -n 10 -c 2 -v 3 http://localhost:8072/xyzbank/ms-cards/api/cards/contact-info
+    This is ApacheBench, Version 2.3 <$Revision: 1923142 $>
+    Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+    Licensed to The Apache Software Foundation, http://www.apache.org/
+
+    Benchmarking localhost (be patient)...INFO: GET header ==
+    ---
+    GET /xyzbank/ms-cards/api/cards/contact-info HTTP/1.0
+    Host: localhost:8072
+    User-Agent: ApacheBench/2.3
+    Accept: */*
+
+
+    ---
+    LOG: header received:
+    HTTP/1.1 200 OK
+    transfer-encoding: chunked
+    X-RateLimit-Remaining: 0
+    X-RateLimit-Requested-Tokens: 1
+    X-RateLimit-Burst-Capacity: 1
+    X-RateLimit-Replenish-Rate: 1
+    Content-Type: application/json
+    Date: Fri, 17 Oct 2025 07:03:03 GMT
+    xyzbank-correlation-id: 91cfff4e-dc21-437e-a44d-cf29f4258969
+    X-Response-Time: 2025-10-17T12:15:28.497315900
+    connection: close
+
+
+    LOG: Response code = 200
+    LOG: header received:
+    HTTP/1.0 429 Too Many Requests
+    X-RateLimit-Remaining: 0
+    X-RateLimit-Requested-Tokens: 1
+    X-RateLimit-Burst-Capacity: 1
+    X-RateLimit-Replenish-Rate: 1
+    content-length: 0
+
+
+    WARNING: Response code not 2xx (429)
+    LOG: header received:
+    HTTP/1.0 429 Too Many Requests
+    X-RateLimit-Remaining: 0
+    X-RateLimit-Requested-Tokens: 1
+    X-RateLimit-Burst-Capacity: 1
+    X-RateLimit-Replenish-Rate: 1
+    content-length: 0
+
+
+    WARNING: Response code not 2xx (429)
+    LOG: header received:
+    HTTP/1.0 429 Too Many Requests
+    X-RateLimit-Remaining: 0
+    X-RateLimit-Requested-Tokens: 1
+    X-RateLimit-Burst-Capacity: 1
+    X-RateLimit-Replenish-Rate: 1
+    content-length: 0
+
+
+    WARNING: Response code not 2xx (429)
+    LOG: header received:
+    HTTP/1.0 429 Too Many Requests
+    X-RateLimit-Remaining: 0
+    X-RateLimit-Requested-Tokens: 1
+    X-RateLimit-Burst-Capacity: 1
+    X-RateLimit-Replenish-Rate: 1
+    content-length: 0
+
+
+    WARNING: Response code not 2xx (429)
+    LOG: header received:
+    HTTP/1.0 429 Too Many Requests
+    X-RateLimit-Remaining: 0
+    X-RateLimit-Requested-Tokens: 1
+    X-RateLimit-Burst-Capacity: 1
+    X-RateLimit-Replenish-Rate: 1
+    content-length: 0
+
+
+    WARNING: Response code not 2xx (429)
+    LOG: header received:
+    HTTP/1.0 429 Too Many Requests
+    X-RateLimit-Remaining: 0
+    X-RateLimit-Requested-Tokens: 1
+    X-RateLimit-Burst-Capacity: 1
+    X-RateLimit-Replenish-Rate: 1
+    content-length: 0
+
+
+    WARNING: Response code not 2xx (429)
+    LOG: header received:
+    HTTP/1.0 429 Too Many Requests
+    X-RateLimit-Remaining: 0
+    X-RateLimit-Requested-Tokens: 1
+    X-RateLimit-Burst-Capacity: 1
+    X-RateLimit-Replenish-Rate: 1
+    content-length: 0
+
+
+    WARNING: Response code not 2xx (429)
+    LOG: header received:
+    HTTP/1.0 429 Too Many Requests
+    X-RateLimit-Remaining: 0
+    X-RateLimit-Requested-Tokens: 1
+    X-RateLimit-Burst-Capacity: 1
+    X-RateLimit-Replenish-Rate: 1
+    content-length: 0
+
+
+    WARNING: Response code not 2xx (429)
+    LOG: header received:
+    HTTP/1.0 429 Too Many Requests
+    X-RateLimit-Remaining: 0
+    X-RateLimit-Requested-Tokens: 1
+    X-RateLimit-Burst-Capacity: 1
+    X-RateLimit-Replenish-Rate: 1
+    content-length: 0
+
+
+    WARNING: Response code not 2xx (429)
+    ..done
+
+
+    Server Software:
+    Server Hostname:        localhost
+    Server Port:            8072
+
+    Document Path:          /xyzbank/ms-cards/api/cards/contact-info
+    Document Length:        202 bytes
+
+    Concurrency Level:      2
+    Time taken for tests:   0.140 seconds
+    Complete requests:      10
+    Failed requests:        9
+       (Connect: 0, Receive: 0, Length: 9, Exceptions: 0)
+    Non-2xx responses:      9
+    Total transferred:      2134 bytes
+    HTML transferred:       202 bytes
+    Requests per second:    71.53 [#/sec] (mean)
+    Time per request:       27.961 [ms] (mean)
+    Time per request:       13.981 [ms] (mean, across all concurrent requests)
+    Transfer rate:          14.91 [Kbytes/sec] received
+
+    Connection Times (ms)
+                  min  mean[+/-sd] median   max
+    Connect:        0    0   0.3      1       1
+    Processing:    10   21  12.1     16      46
+    Waiting:        9   20  11.7     15      43
+    Total:         11   22  12.0     17      46
+    ERROR: The median and mean for the initial connection time are more than twice the standard
+           deviation apart. These results are NOT reliable.
+
+    Percentage of the requests served within a certain time (ms)
+      50%     17
+      66%     19
+      75%     34
+      80%     35
+      90%     46
+      95%     46
+      98%     46
+      99%     46
+     100%     46 (longest request)
+
+
+By looking at the above log, we can confirm that only one request got passed in a request and all the other 9 requests got failed with "429 Too Many Requests" erros.
+
+>>> Implementing RateLimiter pattern in Accounts Service (ms-accounts)
+
+Step 1: Add the RateLimiter configuration to getJavaInfo API of AccountController (Without fallback)
+
+Here @RateLimiter annotation is from "io.github.resilience4j.ratelimiter.annotation.RateLimiter"
+
+    @Operation(summary = "Get Java Version", description = "Get Java Version that is installed in accounts-ms")
+    @ApiResponses({ @ApiResponse(responseCode = "200", description = "HTTP Status OK"),
+        @ApiResponse(responseCode = "500", description = "HTTP Status Internal Server Error", content = @Content(schema = @Schema(implementation = ErrorResponseDto.class))) })
+    @RateLimiter(name = "getJavaInfoRateLimiter")
+    @GetMapping("/java-version")
+    public ResponseEntity<String> getJavaInfo() {
+      return ResponseEntity.status(HttpStatus.OK).body(environment.getProperty("MAVEN_HOME"));
+    }
+
+Step 2: Add RateLimiter related properties to application.properties of ms-accounts
+
+### RATE LIMITER CONFIGURATION - RESILIENCE4J
+
+# We are communicating the rate limiter pattern on how long the client should wait to acquire permission when the limit is exceeded, i.e., if the client exceeds the defined limit, it will wait for 1000ms (1 second) to acquire permission before throwing an exception
+resilience4j.ratelimiter.configs.default.timeoutDuration=1000
+# We are communicating the rate limiter pattern the time period after which the limit will be refreshed, i.e., after every 5 seconds, the limit will be refreshed
+resilience4j.ratelimiter.configs.default.limitRefreshPeriod=5000
+# We are communicating the rate limiter pattern to allow only 1 request per defined limitRefreshPeriod
+resilience4j.ratelimiter.configs.default.limitForPeriod=1
+
+or
+
+# The maximum time the thread can wait for the new fresh period to arrive with the new quota. With this configuration, the thread is going to wait for a maximum of 1 second
+resilience4j.ratelimiter.configs.default.timeoutDuration=1000
+# We want to renew the quota for every 5 seconds 
+resilience4j.ratelimiter.configs.default.limitRefreshPeriod=5000
+# This is the quota, for every 5 seconds (limitRefreshPeriod), only 1 request is allowed
+resilience4j.ratelimiter.configs.default.limitForPeriod=1
+
+Step 3: Start the applications and verify the behaviour
+
+    First call: curl --location 'http://localhost:8072/xyzbank/ms-accounts/api/accounts/java-version'
+
+    C:\Program Files\apache-maven-3.9.9
+
+    Second call: Succeeds
+
+    Third call: Fails 
+
+    {
+        "apiPath": "uri=/api/accounts/java-version",
+        "errorCode": "INTERNAL_SERVER_ERROR",
+        "errorMessage": "RateLimiter 'getJavaInfoRateLimiter' does not permit further calls",
+        "errorTime": "2025-10-18T08:31:36.7039137"
+    }
+
+Reason for getting sucessful response within 4 seconds:
+By author:
+
+    The behavior you’re observing with the RateLimiter in your Accounts Microservice is likely due to nuances in how the RateLimiter pattern is implemented and configured.
+
+    If each request ends up with its own RateLimiter instance, the limit won’t apply globally, and more requests will succeed. If the RateLimiter is not a singleton or not properly scoped, multiple instances might be created. Each instance would enforce its own limit, effectively bypassing the intended restriction.
+
+    May be inside the framework, team might have coded that minimum number for limitForPeriod can't be less than 5 or 10.
+
+    Can you please try the below options and see if it works,
+
+    1) Try increasing the numbers
+
+    2) Try keeping a breakpoint in the API and make the thread wait for ever. Meanwhile try sending fresh requests.
+
+Step 4: Adding the fallback mechanism to getJavaInfo API of AccountController
+
+    @Operation(summary = "Get Java Version", description = "Get Java Version that is installed in accounts-ms")
+    @ApiResponses({ @ApiResponse(responseCode = "200", description = "HTTP Status OK"),
+        @ApiResponse(responseCode = "500", description = "HTTP Status Internal Server Error", content = @Content(schema = @Schema(implementation = ErrorResponseDto.class))) })
+    @RateLimiter(name = "getJavaInfoRateLimiter", fallbackMethod = "getJavaInfoFallback")
+    @GetMapping("/java-version")
+    public ResponseEntity<String> getJavaInfo() {
+      return ResponseEntity.status(HttpStatus.OK).body(environment.getProperty("MAVEN_HOME"));
+    }
+
+    public ResponseEntity<String> getJavaInfoFallback(Throwable throwable) {
+      return ResponseEntity.status(HttpStatus.OK).body("Java Version info not available at the moment");
+    }
+
+Step 5: Restart ms-accounts and ms-gateway-server services and verify the behaviour
+
+    First call: curl --location 'http://localhost:8072/xyzbank/ms-accounts/api/accounts/java-version'
+
+    C:\Program Files\apache-maven-3.9.9
+
+    Second call: succeeds
+
+    Third call: succeeds and the response is from the fallback 
+
+    Response: Java Version info not available at the moment 
+
+>>> Bulkhead pattern in Microservices
+-------------------------------------
+
+The Bulhead pattern in the software architecture is a design pattern that aims to improve the resilience and isolation of components or services within a system. It draws inspiration from the concept of bulkheads in ships, which are physical partitions that prevent the flooding of one compartment from affecting others, enhancing the overall stability and safety of the vessel.
+
+In the context of a software system, the Bulkhead pattern is used to isolate and limit the impact of failures or high loads in one compartment from spreading to other compartments. It helps ensure that a failure or heavy load in one part of the system does not bring down the entire system, enabling other components to continue functioning independently.
+
+Bulkhead Pattern helps us to allocate the resources that can be used for specific services, so that resource exhaustion can be reduced.
+
+The Bulkhead pattern is particularly useful in systems that require high availability, fault tolerance, and isolation between components
+
+    Without Bulkhead in ms-accounts:
+
+    Without Bulkhead, fetchCustomerDetailByMobileNumber (/api/customers/fetch) will start eating all the threads, resources available, which will affect the performance of fetchAccountDetailByMobileNumber (/api/accounts/fetch)
+
+    With Bulkhead in ms-accounts:
+
+    With Bulkhead, fetchCustomerDetailByMobileNumber (/api/customers/fetch) and fetchAccountDetailByMobileNumber (/api/accounts/fetch) will have their own resource, thread pool defined.
+
+>>> Aspect order of Resiliency patterns
+---------------------------------------
+
+The Resilience4j Aspects order is the following:
+
+Retry ( CircuitBreaker ( RateLimiter ( TimeLimiter ( Bulkhead ( Function ) ) ) ) )
+
+so Retry is applied at the end (if needed).
+
+If you need a different order, you must use the functional chaining style instead of the Spring annotations style or explicitly set aspect order using the following properties:
+
+    - resilience4j.retry.retryAspectOrder
+    - resilience4j.circuitbreaker.circuitBreakerAspectOrder
+    - resilience4j.ratelimiter.rateLimiterAspectOrder
+    - resilience4j.timelimiter.timeLimiterAspectOrder
+    - resilience4j.bulkhead.bulkheadAspectOrder
+
+For example - to make Circuit Breaker starts after Retry finish its work you must set retryAspectOrder property to greater value than circuitBreakerAspectOrder value (the higher value = the higher priority).
+
+YAML
+
+    resilience4j:
+      circuitbreaker:
+        circuitBreakerAspectOrder: 1
+      retry:
+        retryAspectOrder: 2
+
+Ref: https://resilience4j.readme.io/docs/getting-started-3
+
+>>> Resiliency patterns using Docker containers and Docker compose
+
+Step 1: Update docker-compose.yml
+
+- Add a new service for 'redis' in docker-compose.yml file
+- Update ms-gateway-server configuration
+- Make the same changes on default/docker-compose.yml, qa/docker-compose.yml, and prod/docker-compose.yml
+
+    services:
+
+      ms-redis:
+        image: "redis"
+        ports:
+          - "6379:6379"
+        healthcheck:
+          test: ["CMD-SHELL","redis-cli ping | grep PONG"]
+          timeout: 10s
+          retries: 10
+        extends:
+          file: common-config.yml
+          service: network-deploy-service
+
+      ms-config-server:
+        image: "dhandapaniks/ms-config-server:0.0.5"
+        container_name: "ms-config-server"
+        ports:
+          - "8071:8071"
+        healthcheck:
+          test: "curl --fail --silent localhost:8071/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+          interval: 10s
+          timeout: 5s # In each check, it has to wait for 5 seconds
+          retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+          start_period: 10s # Execute health check command or api only after 10 seconds
+        extends:
+          file: common-config.yml
+          service: microservice-base-config
+        environment:
+          SPRING_APPLICATION_NAME: "ms-config-server"
+
+          
+      ms-eurekaserver:
+        image: "dhandapaniks/ms-eurekaserver:0.0.5"
+        container_name: "ms-eurekaserver"
+        ports:
+          - "8070:8070"
+        depends_on:
+          ms-config-server:
+            condition: service_healthy
+        healthcheck:
+          test: "curl --fail --silent localhost:8070/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+          interval: 10s
+          timeout: 5s # In each check, it has to wait for 5 seconds
+          retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+          start_period: 10s # Execute health check command or api only after 10 seconds
+        extends:
+          file: common-config.yml
+          service: microservice-configserver-config
+        environment:
+          SPRING_APPLICATION_NAME: "ms-eurekaserver"
+
+      ms-accounts:
+        image: "dhandapaniks/ms-accounts:0.0.5"
+        container_name: "ms-accounts"
+        ports:
+          - "8080:8080"
+        depends_on:
+          ms-config-server:
+            condition: service_healthy
+          ms-eurekaserver:
+            condition: service_healthy
+        healthcheck:
+          test: "curl --fail --silent localhost:8080/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+          interval: 10s
+          timeout: 5s # In each check, it has to wait for 5 seconds
+          retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+          start_period: 10s # Execute health check command or api only after 10 seconds
+        environment:
+          SPRING_APPLICATION_NAME: "ms-accounts"
+        extends:
+          file: common-config.yml
+          service: microservice-eurekaserver-config
+
+      ms-loans:
+        image: "dhandapaniks/ms-loans:0.0.5"
+        container_name: "ms-loans"
+        ports:
+          - "8090:8090"
+        depends_on:
+          ms-config-server:
+            condition: service_healthy
+          ms-eurekaserver:
+            condition: service_healthy
+        healthcheck:
+          test: "curl --fail --silent localhost:8090/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+          interval: 10s
+          timeout: 5s # In each check, it has to wait for 5 seconds
+          retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+          start_period: 10s # Execute health check command or api only after 10 seconds
+        environment:
+          SPRING_APPLICATION_NAME: "ms-loans"
+        extends:
+          file: common-config.yml
+          service: microservice-eurekaserver-config
+
+      ms-cards:
+        image: "dhandapaniks/ms-cards:0.0.5"
+        container_name: "ms-cards"
+        ports:
+          - "9000:9000"
+        depends_on:
+          ms-config-server:
+            condition: service_healthy
+          ms-eurekaserver:
+            condition: service_healthy
+        healthcheck:
+          test: "curl --fail --silent localhost:9000/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+          interval: 10s
+          timeout: 5s # In each check, it has to wait for 5 seconds
+          retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+          start_period: 10s # Execute health check command or api only after 10 seconds
+        environment:
+          SPRING_APPLICATION_NAME: "ms-cards"
+        extends:
+          file: common-config.yml
+          service: microservice-eurekaserver-config
+          
+      ms-gateway-server:
+        image: "dhandapaniks/ms-gateway-server:0.0.5"
+        container_name: "ms-gateway-server"
+        ports:
+          - "8072:8072"
+        depends_on:
+          ms-accounts:
+            condition: service_healthy
+          ms-loans:
+            condition: service_healthy
+          ms-cards:
+            condition: service_healthy
+          ms-redis:
+            condition: service_healthy
+        environment:
+          SPRING_APPLICATION_NAME: "ms-gateway-server"
+          SPRING_DATA_REDIS_CONNECT-TIMEOUT: 2s
+          SPRING_DATA_REDIS_HOST: ms-redis
+          SPRING_DATA_REDIS_PORT: 6379
+          SPRING_DATA_REDIS_TIMEOUT: 1s
+        extends:
+          file: common-config.yml
+          service: microservice-eurekaserver-config
+          
+    networks:
+      dhandapaniks-xyzbank-msntwrk:
+        driver: "bridge"  
+
+Step 3: Build new images for the services using new tag
+
+    PS D:\STS_WS\Making-Microservices-Resilient\ms-config-server> mvn compile jib:dockerBuild
+    PS D:\STS_WS\Making-Microservices-Resilient\ms-gateway-server> mvn compile jib:dockerBuild
+    PS D:\STS_WS\Making-Microservices-Resilient\ms-eurekaserver> mvn compile jib:dockerBuild
+    PS D:\STS_WS\Making-Microservices-Resilient\ms-cards> mvn compile jib:dockerBuild
+    PS D:\STS_WS\Making-Microservices-Resilient\ms-loans> mvn compile jib:dockerBuild
+    PS D:\STS_WS\Making-Microservices-Resilient\ms-accounts> mvn compile jib:dockerBuild
+
+Step 4: Push the images to Docker Hub
+
+docker push docker.io/dhandapaniks/ms-accounts:0.0.5
+docker push docker.io/dhandapaniks/ms-cards:0.0.5
+docker push docker.io/dhandapaniks/ms-loans:0.0.5
+docker push docker.io/dhandapaniks/ms-config-server:0.0.5
+docker push docker.io/dhandapaniks/ms-eurekaserver:0.0.5
+docker push docker.io/dhandapaniks/ms-gateway-server:0.0.5
+
+Step 5: Start the services using "docker compose up" command from terminal
+
+Step 5: Test the APIs
+
+java-version
