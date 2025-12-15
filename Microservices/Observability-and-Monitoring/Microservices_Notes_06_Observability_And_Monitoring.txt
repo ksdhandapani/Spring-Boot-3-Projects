@@ -1,0 +1,2240 @@
+************************************************
+Observability and Monitoring of Microservices v1
+************************************************
+
+>>> Challenges
+
+1. Debugging Microservices:
+   - How to trace transactions across multiple services and find the source of issues?
+   - How to gather and centralize logs from various services for easier searching and filtering to identify bugs?
+
+2. API Performance Monitoring:
+   - How to track the time taken for each service call in a microservices network?
+
+3. Service Metrics and Health Monitoring:
+   - How to monitor CPU usage, JVM metrics, and other important metrics across all microservices?
+   - How to check the health status of all microservices in one place and set alerts for any abnormal behavior?
+
+>>> Solution
+
+Effective observability and monitoring can help identify and fix these challenges before they lead to outages.
+
+>>> Observability
+-----------------
+
+Observability means understanding a system's internal state through its outputs. In microservices, this is achieved by collecting data from various sources like metrics, logs, and traces.
+
+The three pillars of observability are:
+
+1. Metrics: These are measurements of system health, tracking CPU and memory usage, response times, etc.
+   
+2. Logs: These record events in the system, helping track errors and unexpected issues.
+   
+3. Traces: These show the path of a request through the system, helping identify performance bottlenecks.
+
+By analyzing data from these three sources, we can better understand our microservices architecture, troubleshoot problems, improve performance, and maintain system health.
+
+>>> Monitoring
+--------------
+
+Monitoring in microservices involves checking telemetry data and setting alerts for known issues. It helps identify and troubleshoot problems, ensuring the health of individual microservices and the entire network.
+
+>>> Importance of Monitoring
+
+- Identify Problems: Collecting and analyzing data allows you to find issues before they disrupt services.
+- Track Health: You can monitor the performance of microservices to spot any that are struggling.
+- Optimize Performance: Identifying areas to improve can enhance the reliability and efficiency of your microservices.
+
+Monitoring and observability go hand-in-hand, both using telemetry data like metrics, traces, and logs, which are the key components of observability.
+
+>>> Observability vs Monitoring
+-------------------------------
+
+| Feature       | Monitoring                       | Observability                          |
+|---------------|----------------------------------|----------------------------------------|
+| Purpose       | Identify and troubleshoot issues | Understand the system's internal state |
+| Data          | Metrics, traces, logs            | Metrics, traces, logs, and more        |
+| Goal          | Spot problems                    | Know how the system operates           |
+| Approach      | Reactive                         | Proactive                              |
+
+In summary, monitoring is about collecting data and reacting to problems, while observability focuses on understanding and fixing issues in real time.
+
+>>> Centralized Logging in Microservices
+----------------------------------------
+
+>>> What is Logging?
+
+Logs are records of events in software applications, showing when things happened and their context. They help answer questions like "What occurred at this time?" or "Which user was involved?" Logging is important for troubleshooting and debugging, allowing us to reconstruct events in an application. Logs are categorized by severity levels—trace, debug, info, warn, and error—so we can focus on critical issues in production while adjusting details during debugging.
+
+>>> Logging in Monolithic Apps
+
+In monolithic applications, all code and logs are in one place, making it easy to find and fix issues.
+
+>>> Logging in Microservices
+
+In microservices, each service generates its own logs, complicating the process because logs are scattered. To tackle this, centralized logging is used. It gathers all logs from different services into one location, making it simpler to find and resolve problems.
+
+>>> Managing Logs with Grafana, Loki, and Promtail
+--------------------------------------------------
+
+>>> Grafana
+
+- An open-source web application for analytics and visualization, Grafana offers charts, graphs, and alerts when connected to various data sources. 
+- It's easily installed via Docker and is widely used for monitoring applications and infrastructure.
+
+>>> Grafana Loki
+
+- Loki is a scalable and cost-effective log aggregation system that serves as a centralized storage for microservice logs. 
+- It's user-friendly and designed to handle the demands of rigorous applications.
+
+>>>Grafana Promtail
+
+- Promtail is a lightweight log agent that sends logs from containers to Loki. 
+- Its easy configuration allows it to collect logs from diverse sources.
+
+Together, Grafana, Loki, and Promtail create a powerful logging solution that enhances the understanding and troubleshooting of applications, with Grafana visualizing logs stored in Loki.
+
+>>> Flow
+
+Loans, Cards, Accounts, API Gateway <--- fetches logs --- Promtail --- forward logs ---> Loki <--- Query and search logs --- Grafana
+
+Promtail - Collects logs from containers, processes, and forwards them to Loki
+Loki - Log aggregation system
+Grafana - Query, search, and visualize the logs with Loki as a data source
+
+*** From Grafana Loki version 3.0 onwards, Promtail, which is responsible for scraping log lines, has been replaced with a new product called Alloy ***
+
+Cloud native applications generate logs as events sent to standard output, allowing them to focus on core functionality without being tied to specific logging or storage solutions. 
+
+This decoupling benefits the application and enables the infrastructure to manage log collection, aggregation, and storage effectively. 
+
+The 15-Factor methodology also advises treating logs as event streams to standard output, without concern for their processing or storage.
+
+
+************************************************
+Observability and Monitoring of Microservices v2
+************************************************
+
+Questions:
+
+How are we going to 'debug' our microservices? / Debugging a problem in microservices?
+
+- How do we trace transactions across multiple services, containers and try to find where exactly the problem or bug is?
+- How do we combine all the logs from multiple services into a central location where they can be indexed, searched, filtered, and grouped to find bugs that are contributing to a problem?
+
+How are we going to monitor the performance of service calls? / Monitoring performance of service calls?
+
+- How can we track the path of a specific chain service call through our microservices network, and see how long it took to complete at each microservice?
+
+How are we going to monitor service metrics and health? / Monitoring services metrics and health?
+
+- How can we easily and efficiently monitor the metrics like CPU usage, JVM metrics, etc? For all the microservice applications in our network?
+- How can we monitor the status and health of all of our microservice applications in a single place, and create alerts and notifications for any abnormal behaviour of the services?
+
+Solution: Observability and Monitoring solve the challenge of identifying and resolving the above problems in microservices architectures before they cause outages.
+
+>>> Observability vs Monitoring
+
+-- Observability:
+
+Observability is the ability to understand the internal state of the system by observing its outputs. In the context of microservices, observability is achieved by collecting and analyzing data from a variety of sources, such as metrics, logs, and traces.
+
+Three pillars of observability:
+
+Metrics: Metrics are quantitative measurements of the health of a system. They can be used to track things like CPU usage, memory usage, and response times.
+
+Logs: Logs are records of events that occur in a system. They can be used to track things like errors, exceptions, and other unexpected events.
+
+Traces: Traces are a record of the path that a request takes through a system. They can be used to track the performance of a request and to identify bottlenecks.
+
+By collecting and analyzing data from these three sources, you can gain a comprehensive understanding of the internal state of your microservices architecture. This understanding can be used to identify and troubleshoot problems, improve performance, and ensure the overall health of your system.
+
+-- Monitoring:
+
+Monitoring in microservices involves checking the telemetry data available for the application and defining alerts for known failure states. This process collects and analyzes data from a system to identify and troubleshoot problems, as well as track the health of individual microservices and the overall health of the microservices network.
+
+Monitoring in microservices is important because it allows you to:
+
+- Identify and troubleshoot problems: By collecting and analyzing data from your microservices, you can identify problems before they cause outages or other disruptions.
+
+For example, if you take the same CPU usage example, if a particular microservice's CPU usage is more than 80%, then I can try to add one more instance of the microservice so that the traffic will be divided between these two instances. So here, using this monitoring information, we are trying to avoid the outage by adding more instances.
+
+- Track the health of your microservices: Monitoring can help you track the health of your microservices, so you can identify any microservices that are underperforming or that are experiencing problems.
+
+- Optimize our microservices: By monitoring your microservices, you can identify areas where you can optimize your microservices to improve performance and reliability.
+
+-- Difference between Observability and Monitoring:
+
+Monitoring and Observability can be considered as two sides of the same coin. Both rely on the same types of telemetry data to enable insight into software-distributed systems. These telemetry data or data types include metrics, traces, and logs. They are often referred to as the three pillars of observability.
+
+Monitoring (Reactive) helps us identify and troubleshoot problems
+Observability (Proactive) helps us understand the internal state of a system
+
+Monitory is reacting to problems, while observability is fixing them in real time
+
+>>> Logging
+
+Logs are discrete records of events that happen in software applications over time. They contain a timestamp that includes when the event happened, as well as information about the event and its context. This information can be used to answer questions like "What happened at this time?", "Which thread was processing the event?", or "Which user/tenant was in the context?".
+
+Logs are essential tools for troubleshooting and debugging tasks. They can be used to reconstruct what happened at a specific point in time in a single application instance. Logs are typically categorized according to the type or severity of the event, such as trace, debug, info, warn, and error. This allows us to log only the most severe events in production, while still giving us the chance to change the log level temporarily during debugging.
+
+- Logging in Monolithic Apps: In monolithic apps, all of the code is in a single codebase. This means that all of the logs are also in a single location. This makes it easy to find and troubleshoot problems, as you only need to look into one place. 
+
+- Logging in Microservices: Logging in microservices is complex. This is because each service has its own logs. This means that you need to look into multiple places to find all of the logs for a particular request.
+
+To address this challenge, microservices architectures often use "centralized logging". Centralized logging collects logs from all of the services in the architecture and stores them in a single location. This makes it easier to find and troubleshoot problems, as you only need to look into one place.
+
+>>> Introduction to managing logs with Grafana, Loki and Promtail
+-----------------------------------------------------------------
+
+What is Grafana? 
+
+Grafana is an open-source analytics and interactive visualization web application. It provides charts, graphs, and alerts for the web when connected to supported data sources. It can be easily installed using Docker or Docker Compose.
+
+Grafana is a popular tool for visualizing metrics, logs, and traces from a variety of sources. Organizations of all sizes use it to monitor their applications and infrastructure.
+
+What is Grafana Loki?
+
+Grafana Loki is a horizontally scalable, highly available, and cost-effective log aggregation system. It is designed to be easy to use and to scale to meet the needs of even the most demanding applications.
+
+What is Promtail?
+
+Promtail is a lightweight log agent that ships logs from your containers to Loki. It is easy to configure and can be used to collect logs from a wide variety of sources.
+
+Together, Grafana, Loki, and Promtail provide a powerful logging solution that can help you understand and troubleshoot your applications. 
+
+Grafana provides visualization of the log lines captured within Loki.
+
+Edge Server / Loans / Cards / Accounts  ----- fetches logs -----> Promtail (Collects logs from containers, processes and forwards them to Loki) ----- forward logs -----> Loki (Log aggregation system) <----- Query & Search logs ----- Grafana (Query, search, visualize the logs with Loki as data source)
+
+*** From Grafana Loki version 3.0 onwards, Promtail, which is responsible for scraping log lines, has been replaced with a new product called "Alloy" ***
+
+>>> What the 15 Factor methodology says about treating logs:
+
+- Cloud native applications generate logs as events and send them to the standard output, without being concerned about the processing or storage of those logs. 
+
+- One advantage of treating logs as event streams and emitting them to stdout is that it decouples the application from the log processing infrastructure. The application can focus on its core functionality without being tied to a specific logging implementation or storage solution. 
+
+- The infrastructure, on the other hand, can handle the collection, aggregation, and storage of logs using appropriate tools and services.
+
+- The 15-factor methodology recommends treating logs as events, streamed to the standard output and is concerned with how they are processed or stored. 
+
+Ref: https://grafana.com/docs/loki/latest/get-started/quick-start/quick-start/
+
+>>> Implementation - Logging using Grafana, Loki, and Promtail
+
+Promtail is going to read the content from our docker containers with the help of socket paths present inside all our containers.
+
+Step 1: Download the following files
+
+wget https://raw.githubusercontent.com/grafana/loki/main/examples/getting-started/loki-config.yaml -O loki-config.yaml
+wget https://raw.githubusercontent.com/grafana/loki/main/examples/getting-started/alloy-local-config.yaml -O alloy-local-config.yaml
+
+Whenever we see '&' in YAML file that indicates an anchor which means we are trying to create a variale with a name and assign a value.
+
+Example:
+
+    networks: &loki-dns
+      loki:
+        aliases:
+          - loki
+
+In the above example, we created a variable named 'loki-dns' and to this 'loki-dns' variable name, we assigned the value present under the networks.
+
+Referring to an anchor variable using '<<' (merge) and '*' (asterisk)
+
+Asterisk is a special symbol inside YAML which we can use to refer to any of the anchor variable that we have created.
+
+Example:
+
+    networks:
+      <<: *loki-dns
+
+In the above example, we are referring to the networks 'loki' tha we assigned previously to the variable 'loki-dns'.
+
+Step 2: Create folders named observability/loki and observability/alloy inside docker-compose folder and copy the downloaded files
+
+docker-compose/observability/loki/loki-config.yaml
+docker-compose/observability/alloy/alloy-local-config.yaml
+
+Step 3: Update docker-compose/prod/docker-compose.yml
+
+We are going to remove redis container and its configuration from our stack as we have already tested the Redis RateLimiter pattern.
+
+Update the tag version from 0.0.5 to 0.0.6
+
+Copy the service details from https://raw.githubusercontent.com/grafana/loki/main/examples/getting-started/docker-compose.yaml and add it to "docker-compose/prod/docker-compose.yml", except the flog service which is a test app and make the necessary changes
+
+- Update path of the config files
+- Replace the netowrk names with 'dhandapaniks-xyzbank-msntwrk'
+
+		services:
+
+		  read:
+		    image: grafana/loki:3.1.2
+		    command: "-config.file=/etc/loki/config.yaml -target=read"
+		    ports:
+		      - 3101:3100
+		      - 7946
+		      - 9095
+		    volumes:
+		      - ../observability/loki/loki-config.yaml:/etc/loki/config.yaml
+		    depends_on:
+		      - minio
+		    healthcheck:
+		      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1" ]
+		      interval: 10s
+		      timeout: 5s
+		      retries: 5
+		    networks: &loki-dns
+		      dhandapaniks-xyzbank-msntwrk:
+		        aliases:
+		          - loki
+
+		  write:
+		    image: grafana/loki:3.1.2
+		    command: "-config.file=/etc/loki/config.yaml -target=write"
+		    ports:
+		      - 3102:3100
+		      - 7946
+		      - 9095
+		    volumes:
+		      - ../observability/loki/loki-config.yaml:/etc/loki/config.yaml
+		    healthcheck:
+		      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1" ]
+		      interval: 10s
+		      timeout: 5s
+		      retries: 5
+		    depends_on:
+		      - minio
+		    networks:
+		      <<: *loki-dns
+
+		  alloy:
+		    image: grafana/alloy:v1.5.1
+		    volumes:
+		      - ../observability/alloy/alloy-local-config.yaml:/etc/alloy/config.alloy:ro
+		      - /var/run/docker.sock:/var/run/docker.sock
+		    command: run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
+		    ports:
+		      - 12345:12345
+		    depends_on:
+		      - gateway
+		    extends:
+		      file: common-config.yml
+		      service: network-deploy-service
+
+		  minio:
+		    image: minio/minio:RELEASE.2024-12-18T13-15-44Z
+		    entrypoint:
+		      - sh
+		      - -euc
+		      - |
+		        mkdir -p /data/loki-data && \
+		        mkdir -p /data/loki-ruler && \
+		        minio server /data
+		    environment:
+		      - MINIO_ROOT_USER=loki
+		      - MINIO_ROOT_PASSWORD=supersecret
+		      - MINIO_PROMETHEUS_AUTH_TYPE=public
+		      - MINIO_UPDATE=off
+		    ports:
+		      - 9000
+		    volumes:
+		      - ./.data/minio:/data
+		    healthcheck:
+		      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
+		      interval: 15s
+		      timeout: 20s
+		      retries: 5
+		    extends:
+		      file: common-config.yml
+		      service: network-deploy-service
+
+		  prometheus:
+		    image: prom/prometheus:v3.1.0
+		    container_name: prometheus
+		    ports:
+		     - "9090:9090"
+		    volumes:
+		     - ../observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+		    extends:
+		     file: common-config.yml
+		     service: network-deploy-service
+		    
+		  grafana:
+		    image: grafana/grafana:11.4.0
+		    environment:
+		      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+		      - GF_AUTH_ANONYMOUS_ENABLED=true
+		      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+		    depends_on:
+		      - gateway
+		    entrypoint:
+		      - sh
+		      - -euc
+		      - |
+		        /run.sh
+		    ports:
+		     - "3000:3000"
+		    volumes:
+		     - ../observability/grafana/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
+		    healthcheck:
+		      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1" ]
+		      interval: 10s
+		      timeout: 5s
+		      retries: 5
+		    extends:
+		      file: common-config.yml
+		      service: network-deploy-service
+
+		  backend:
+		    image: grafana/loki:3.1.2
+		    volumes:
+		      - ../observability/loki/loki-config.yaml:/etc/loki/config.yaml
+		    ports:
+		      - "3100"
+		      - "7946"
+		    command: "-config.file=/etc/loki/config.yaml -target=backend -legacy-read-mode=false"
+		    depends_on:
+		      - gateway
+		    extends:
+		      file: common-config.yml
+		      service: network-deploy-service
+		    
+
+		  gateway:
+		    image: nginx:1.27.3
+		    depends_on:
+		      - read
+		      - write
+		    entrypoint:
+		      - sh
+		      - -euc
+		      - |
+		        cat <<EOF > /etc/nginx/nginx.conf
+		        user  nginx;
+		        worker_processes  5;  ## Default: 1
+
+		        events {
+		          worker_connections   1000;
+		        }
+
+		        http {
+		          resolver 127.0.0.11;
+
+		          server {
+		            listen             3100;
+
+		            location = / {
+		              return 200 'OK';
+		              auth_basic off;
+		            }
+
+		            location = /api/prom/push {
+		              proxy_pass       http://write:3100\$$request_uri;
+		            }
+
+		            location = /api/prom/tail {
+		              proxy_pass       http://read:3100\$$request_uri;
+		              proxy_set_header Upgrade \$$http_upgrade;
+		              proxy_set_header Connection "upgrade";
+		            }
+
+		            location ~ /api/prom/.* {
+		              proxy_pass       http://read:3100\$$request_uri;
+		            }
+
+		            location = /loki/api/v1/push {
+		              proxy_pass       http://write:3100\$$request_uri;
+		            }
+
+		            location = /loki/api/v1/tail {
+		              proxy_pass       http://read:3100\$$request_uri;
+		              proxy_set_header Upgrade \$$http_upgrade;
+		              proxy_set_header Connection "upgrade";
+		            }
+
+		            location ~ /loki/api/.* {
+		              proxy_pass       http://read:3100\$$request_uri;
+		            }
+		          }
+		        }
+		        EOF
+		        /docker-entrypoint.sh nginx -g "daemon off;"
+		    ports:
+		      - "3100:3100"
+		    healthcheck:
+		      test: ["CMD", "service", "nginx", "status"]
+		      interval: 10s
+		      timeout: 5s
+		      retries: 5
+		    extends:
+		      file: common-config.yml
+		      service: network-deploy-service
+
+		  ms-config-server:
+		    image: "dhandapaniks/ms-config-server:0.0.6"
+		    container_name: "ms-config-server"
+		    ports:
+		      - "8071:8071"
+		    healthcheck:
+		      test: "curl --fail --silent localhost:8071/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+		      interval: 10s
+		      timeout: 5s # In each check, it has to wait for 5 seconds
+		      retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+		      start_period: 10s # Execute health check command or api only after 10 seconds
+		    extends:
+		      file: common-config.yml
+		      service: microservice-base-config
+		    environment:
+		      SPRING_APPLICATION_NAME: "ms-config-server"
+
+		      
+		  ms-eurekaserver:
+		    image: "dhandapaniks/ms-eurekaserver:0.0.6"
+		    container_name: "ms-eurekaserver"
+		    ports:
+		      - "8070:8070"
+		    depends_on:
+		      ms-config-server:
+		        condition: service_healthy
+		    healthcheck:
+		      test: "curl --fail --silent localhost:8070/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+		      interval: 10s
+		      timeout: 5s # In each check, it has to wait for 5 seconds
+		      retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+		      start_period: 10s # Execute health check command or api only after 10 seconds
+		    extends:
+		      file: common-config.yml
+		      service: microservice-configserver-config
+		    environment:
+		      SPRING_APPLICATION_NAME: "ms-eurekaserver"
+
+		  ms-accounts:
+		    image: "dhandapaniks/ms-accounts:0.0.6"
+		    container_name: "ms-accounts"
+		    ports:
+		      - "8080:8080"
+		    depends_on:
+		      ms-config-server:
+		        condition: service_healthy
+		      ms-eurekaserver:
+		        condition: service_healthy
+		    healthcheck:
+		      test: "curl --fail --silent localhost:8080/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+		      interval: 10s
+		      timeout: 5s # In each check, it has to wait for 5 seconds
+		      retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+		      start_period: 10s # Execute health check command or api only after 10 seconds
+		    environment:
+		      SPRING_APPLICATION_NAME: "ms-accounts"
+		    extends:
+		      file: common-config.yml
+		      service: microservice-eurekaserver-config
+
+		  ms-loans:
+		    image: "dhandapaniks/ms-loans:0.0.6"
+		    container_name: "ms-loans"
+		    ports:
+		      - "8090:8090"
+		    depends_on:
+		      ms-config-server:
+		        condition: service_healthy
+		      ms-eurekaserver:
+		        condition: service_healthy
+		    healthcheck:
+		      test: "curl --fail --silent localhost:8090/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+		      interval: 10s
+		      timeout: 5s # In each check, it has to wait for 5 seconds
+		      retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+		      start_period: 10s # Execute health check command or api only after 10 seconds
+		    environment:
+		      SPRING_APPLICATION_NAME: "ms-loans"
+		    extends:
+		      file: common-config.yml
+		      service: microservice-eurekaserver-config
+
+		  ms-cards:
+		    image: "dhandapaniks/ms-cards:0.0.6"
+		    container_name: "ms-cards"
+		    ports:
+		      - "9000:9000"
+		    depends_on:
+		      ms-config-server:
+		        condition: service_healthy
+		      ms-eurekaserver:
+		        condition: service_healthy
+		    healthcheck:
+		      test: "curl --fail --silent localhost:9000/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+		      interval: 10s
+		      timeout: 5s # In each check, it has to wait for 5 seconds
+		      retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+		      start_period: 10s # Execute health check command or api only after 10 seconds
+		    environment:
+		      SPRING_APPLICATION_NAME: "ms-cards"
+		    extends:
+		      file: common-config.yml
+		      service: microservice-eurekaserver-config
+		      
+		  ms-gateway-server:
+		    image: "dhandapaniks/ms-gateway-server:0.0.6"
+		    container_name: "ms-gateway-server"
+		    ports:
+		      - "8072:8072"
+		    depends_on:
+		      ms-accounts:
+		        condition: service_healthy
+		      ms-loans:
+		        condition: service_healthy
+		      ms-cards:
+		        condition: service_healthy
+		    environment:
+		      SPRING_APPLICATION_NAME: "ms-gateway-server"
+		    extends:
+		      file: common-config.yml
+		      service: microservice-eurekaserver-config
+
+		networks:
+		  dhandapaniks-xyzbank-msntwrk:
+		    driver: "bridge"    
+
+Content of alloy-local-config.yml
+
+		discovery.docker "flog_scrape" {
+			host             = "unix:///var/run/docker.sock"
+			refresh_interval = "5s"
+		}
+
+		discovery.relabel "flog_scrape" {
+			targets = []
+
+			rule {
+				source_labels = ["__meta_docker_container_name"]
+				regex         = "/(.*)"
+				target_label  = "container"
+			}
+		}
+
+		loki.source.docker "flog_scrape" {
+			host             = "unix:///var/run/docker.sock"
+			targets          = discovery.docker.flog_scrape.targets
+			forward_to       = [loki.write.default.receiver]
+			relabel_rules    = discovery.relabel.flog_scrape.rules
+			refresh_interval = "5s"
+		}
+
+		loki.write "default" {
+			endpoint {
+				url       = "http://gateway:3100/loki/api/v1/push"
+				tenant_id = "tenant1"
+			}
+			external_labels = {}
+		}
+
+Content of loki-config.yml
+
+		---
+		server:
+		  http_listen_address: 0.0.0.0
+		  http_listen_port: 3100
+
+		memberlist:
+		  join_members: ["read", "write", "backend"]
+		  dead_node_reclaim_time: 30s
+		  gossip_to_dead_nodes_time: 15s
+		  left_ingesters_timeout: 30s
+		  bind_addr: ['0.0.0.0']
+		  bind_port: 7946
+		  gossip_interval: 2s
+
+		schema_config:
+		  configs:
+		    - from: 2023-01-01
+		      store: tsdb
+		      object_store: s3
+		      schema: v13
+		      index:
+		        prefix: index_
+		        period: 24h
+		common:
+		  path_prefix: /loki
+		  replication_factor: 1
+		  compactor_address: http://backend:3100
+		  storage:
+		    s3:
+		      endpoint: minio:9000
+		      insecure: true
+		      bucketnames: loki-data
+		      access_key_id: loki
+		      secret_access_key: supersecret
+		      s3forcepathstyle: true
+		  ring:
+		    kvstore:
+		      store: memberlist
+		ruler:
+		  storage:
+		    s3:
+		      bucketnames: loki-ruler
+
+		compactor:
+		  working_directory: /tmp/compactor
+
+Genetate the images with the new tags 0.0.6
+
+    PS D:\STS_WS\Observability-and-Monitoring\ms-eurekaserver> mvn compile jib:dockerBuild
+    PS D:\STS_WS\Observability-and-Monitoring\ms-config-server> mvn compile jib:dockerBuild
+    PS D:\STS_WS\Observability-and-Monitoring\ms-gateway-server> mvn compile jib:dockerBuild
+    PS D:\STS_WS\Observability-and-Monitoring\ms-accounts> mvn compile jib:dockerBuild
+    PS D:\STS_WS\Observability-and-Monitoring\ms-cards> mvn compile jib:dockerBuild
+    PS D:\STS_WS\Observability-and-Monitoring\ms-loans> mvn compile jib:dockerBuild
+
+Run 'docker compose up -d' using the prod profile
+
+    PS C:\Users\sudha> docker ps -a
+    CONTAINER ID   IMAGE                                  COMMAND                  CREATED        STATUS                   PORTS                                                                                                                                       NAMES
+    93f1d0eea9ff   dhandapaniks/ms-gateway-server:0.0.6   "java -cp @/app/jib-…"   19 hours ago   Up 2 minutes             0.0.0.0:8072->8072/tcp, [::]:8072->8072/tcp                                                                                                 ms-gateway-server
+    716be4787b90   grafana/loki:latest                    "/usr/bin/loki -conf…"   19 hours ago   Up 3 minutes             0.0.0.0:51127->3100/tcp, [::]:51127->3100/tcp, 0.0.0.0:51128->7946/tcp, [::]:51128->7946/tcp                                                prod-backend-1
+    cdf1923d380b   grafana/alloy:latest                   "/bin/alloy run --se…"   19 hours ago   Up 3 minutes             0.0.0.0:12345->12345/tcp, [::]:12345->12345/tcp                                                                                             prod-alloy-1
+    a5cb5a6debd2   grafana/grafana:latest                 "sh -euc 'mkdir -p /…"   19 hours ago   Up 3 minutes (healthy)   0.0.0.0:3000->3000/tcp, [::]:3000->3000/tcp                                                                                                 prod-grafana-1
+    791ed1cb5fe9   dhandapaniks/ms-cards:0.0.6            "java -cp @/app/jib-…"   19 hours ago   Up 2 minutes (healthy)   0.0.0.0:9000->9000/tcp, [::]:9000->9000/tcp                                                                                                 ms-cards
+    408de84acfbd   dhandapaniks/ms-loans:0.0.6            "java -cp @/app/jib-…"   19 hours ago   Up 2 minutes (healthy)   0.0.0.0:8090->8090/tcp, [::]:8090->8090/tcp                                                                                                 ms-loans
+    b06c1bff1e7d   dhandapaniks/ms-accounts:0.0.6         "java -cp @/app/jib-…"   19 hours ago   Up 2 minutes (healthy)   0.0.0.0:8080->8080/tcp, [::]:8080->8080/tcp                                                                                                 ms-accounts
+    58485e5471ab   nginx:latest                           "sh -euc 'cat <<EOF …"   19 hours ago   Up 3 minutes (healthy)   0.0.0.0:3100->3100/tcp, [::]:3100->3100/tcp                                                                                                 prod-gateway-1
+    509a3acab1af   dhandapaniks/ms-eurekaserver:0.0.6     "java -cp @/app/jib-…"   19 hours ago   Up 2 minutes (healthy)   0.0.0.0:8070->8070/tcp, [::]:8070->8070/tcp                                                                                                 ms-eurekaserver
+    16d46edfcc94   grafana/loki:latest                    "/usr/bin/loki -conf…"   19 hours ago   Up 3 minutes (healthy)   0.0.0.0:3101->3100/tcp, [::]:3101->3100/tcp, 0.0.0.0:51117->7946/tcp, [::]:51117->7946/tcp, 0.0.0.0:51116->9095/tcp, [::]:51116->9095/tcp   prod-read-1
+    39ffe16f72c7   grafana/loki:latest                    "/usr/bin/loki -conf…"   19 hours ago   Up 3 minutes (healthy)   0.0.0.0:3102->3100/tcp, [::]:3102->3100/tcp, 0.0.0.0:51118->7946/tcp, [::]:51118->7946/tcp, 0.0.0.0:51119->9095/tcp, [::]:51119->9095/tcp   prod-write-1
+    cba8a8072a02   minio/minio                            "sh -euc 'mkdir -p /…"   19 hours ago   Up 3 minutes (healthy)   0.0.0.0:51111->9000/tcp, [::]:51111->9000/tcp                                                                                               prod-minio-1
+    4e374fc78cc9   dhandapaniks/ms-config-server:0.0.6    "java -cp @/app/jib-…"   19 hours ago   Up 3 minutes (healthy)   0.0.0.0:8071->8071/tcp, [::]:8071->8071/tcp                                                                                                 ms-config-server
+    PS C:\Users\sudha>
+
+Step 4: Invoke any APIs to see the logs
+
+Step 5: Access Grafana using localhost:3000
+
+Data sources
+
+- The Connections / Data sources contains the Loki connection details
+- The Explore option on the Data sources helps us see logs by service/container, filter logs by type, text, etc
+
+>>> Metrics and Monitoring with Spring Boot Actuator, Micrometer, Promotheus & Grafana
+--------------------------------------------------------------------------------------
+
+Event logs: Event logs are essential for monitoring applications, but they do not provide enough data to answer all of the questions we need to know. To answer questions like CPU usage, memory usage, thread usage, error requests, etc. To properly monitor, manage, and troubleshoot an application in production, we need more data.
+
+Metrics: Metrics are numerical measurements of an application's performance, collected and aggregated at regular intervals. They can be used to monitor the application's health and performance, and to set alerts or notifications when thresholds are exceeded.
+
+Main components involved:
+
+Actuator - Actuator is mainly used to expose operational information about the running application's health, metrics, info, dump, env, etc. It uses HTTP endpoints or JMX beans to enable us to interact with.
+
+Micrometer - Micrometer automatically exposes '/actuator/metrics' data into something your monitoring system can understand. All you need to do is include that vendor-specific micrometer dependency in your application. Think of it as SLF4J but for metrics.
+
+https://micrometer.io/
+
+Prometheus - The most common format for exporting metrics is the one used by Prometheus, which is an "open-source systems monitoring and alerting toolkit". Just as Loki aggregates and stores event logs, Prometheus does the same with metrics. Using Prometheus, we are going to aggregate the metrics of all our containers and microservices.
+
+Promotheus has certain limitations, we cannot build very complex dashboards and we cannot create alerts and notifications with the Promotheus alone, when we integrate Promotheus with Grafana, we can build a lot of dashboards and apart from dashboard, we can also create alerts and notifications. That is why we need to make sure that we are integrating Promotheus with Grafana, just like how we integrate Liki with the Grafana.
+
+https://prometheus.io/
+
+Grafana - Grafana is a visualization tool that can be used to create dashboards and charts from Prometheus data. Along with this we can also create alerts and notifications.
+
+Actuator ---> Micrometer ---> Promotheus ---> Grafana
+
+>>> Implementation: Metrics and Monitoring with Spring Boot Actuator, Micrometer, Promotheus & Grafana
+
+Step 1: Add the following dependency to the pom.xml of ms-accounts, ms-loans, ms-cards, ms-gateway-server, ms-eurekaserver, and ms-config-server
+
+By adding this dependency, we are telling Micrometer to expose the actuator metrics in a format that Prometheus can understand.
+
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-registry-prometheus</artifactId>
+    </dependency>
+
+Step 2: Add the following porperty to the application.properties of ms-accounts, ms-loans, ms-cards, ms-gateway-server, ms-eurekaserver, and ms-config-server
+
+    # We are telling Spring Boot Actuator to add a custom tag named application with the value as the spring.application.name property value (ms-cards) for all the metrics collected by Micrometer
+    management.metrics.tags.application=${spring.application.name}
+
+Step 4: Start the services independantly (ms-config-server, ms-eurekaserver, ms-accounts, ms-cards, ms-loans, and ms-gateway-server)
+
+Step 5: Access metrics of individual microservices
+
+    ms-accounts http://172.20.176.1:8080/actuator/metrics | http://localhost:8080/actuator/metrics
+    ms-cards http://172.20.176.1:9000/actuator/metrics | http://localhost:9000/actuator/metrics
+    ms-loans http://172.20.176.1:8090/actuator/metrics | http://localhost:8090/actuator/metrics
+    ms-gateway-server http://172.20.176.1:8072/actuator/metrics | http://localhost:8072/actuator/metrics
+    ms-eurekaserver - http://172.20.176.1:8070/actuator/metrics | http://localhost:8070/actuator/metrics
+    ms-config-server - http://172.20.176.1:8071/actuator/metrics | http://localhost:8071/actuator/metrics
+
+    Prometheus endpoints
+
+    ms-accounts http://172.20.176.1:8080/actuator/prometheus | http://localhost:8080/actuator/prometheus
+    ms-cards http://172.20.176.1:9000/actuator/prometheus | http://localhost:9000/actuator/prometheus
+    ms-loans http://172.20.176.1:8090/actuator/prometheus | http://localhost:8090/actuator/prometheus
+    ms-gateway-server http://172.20.176.1:8072/actuator/prometheus | http://localhost:8072/actuator/prometheus
+    ms-eurekaserver - http://172.20.176.1:8070/actuator/prometheus | http://localhost:8070/actuator/prometheus
+    ms-config-server - http://172.20.176.1:8071/actuator/prometheus | http://localhost:8071/actuator/prometheus
+
+As of now, our microservices are exposing the metrics information in the format that Prometheus can understand. 
+We are going to set up Prometheus and integrate the same with the Grafana and post that we can also see some demo with the help of Docker Compose.
+
+Step 5: Stop all the services
+
+Step 6: Create a folder named 'docker-compose/observability/prometheus' and file named 'prometheus.yml' under the folder with the below content
+
+    prometheus.yml
+    
+    global:
+     scrape_interval: 5s # Set the scrape interval to every 5 seconds
+     evaluation_interval: 5s # Evaluate rules every 5 seconds
+     
+    scrape_configs:
+     - job_name: 'ms-accounts'
+       metrics_path: '/actuator/prometheus'
+       static_configs:
+        - targets: ['ms-accounts:8080']
+     - job_name: 'ms-loans'
+       metrics_path: '/actuator/prometheus'
+       static_configs:
+        - targets: ['ms-loans:8090']
+     - job_name: 'ms-cards'
+       metrics_path: '/actuator/prometheus'
+       static_configs:
+        - targets: ['ms-cards:9000']
+     - job_name: 'ms-gateway-server'
+       metrics_path: '/actuator/prometheus'
+       static_configs:
+        - targets: ['ms-gateway-server:8072']
+     - job_name: 'ms-eurekaserver'
+       metrics_path: '/actuator/prometheus'
+       static_configs:
+        - targets: ['ms-eurekaserver:8070']
+     - job_name: 'ms-config-server'
+       metrics_path: '/actuator/prometheus'
+       static_configs:
+        - targets: ['ms-config-server:8071']
+
+Step 7: Update the content of 'docker-compose/prod/docker-compose.yml'
+
+Add a new service named 'prometheus'
+
+      prometheus:
+        image: prom/prometheus:v3.1.0
+        container_name: prometheus
+        ports:
+         - "9090:9090"
+        volumes:
+         - ../observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+        extends:
+         file: common-config.yml
+         service: network-deploy-service
+
+Step 8: Establish a link between Prometheus and Grafana
+
+- Create a folder named 'docker-compose/observability/grafana' and file named 'datasource.yml' under the folder with the below content (Also moving Loki datasource details from docker-compose.yml)
+
+
+    datasource.yml
+
+    apiVersion: 1
+
+    deleteDatasources: # Deleting existing data sources
+      - name: Prometheus
+      - name: Loki
+      - name: Tempo
+      
+    datasources:
+     - name: Prometheus
+       type: prometheus
+       uid: prometheus
+       url: http://prometheus:9090
+       access: proxy
+       orgId: 1
+       basicAuth: false
+       isDefault: false
+       version: 1
+       editable: true
+       jsonData:
+        httpMethod: GET
+     - name: Loki
+       type: loki
+       uid: loki
+       access: proxy
+       orgId: 1
+       editable: true
+       url: http://gateway:3100
+       jsonData:
+        httpHeaderName1: "X-Scope-OrgID"
+       secureJsonData:
+        httpheaderValue1: "tenent-1"
+
+Updated content of docker-compose/prod/docker-compose.yml:
+
+    services:
+
+      read:
+        image: grafana/loki:latest
+        command: "-config.file=/etc/loki/config.yaml -target=read"
+        ports:
+          - 3101:3100
+          - 7946
+          - 9095
+        volumes:
+          - ../observability/loki/loki-config.yaml:/etc/loki/config.yaml
+        depends_on:
+          - minio
+        healthcheck:
+          test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1" ]
+          interval: 10s
+          timeout: 5s
+          retries: 5
+        networks: &loki-dns
+          dhandapaniks-xyzbank-msntwrk:
+            aliases:
+              - loki
+
+      write:
+        image: grafana/loki:latest
+        command: "-config.file=/etc/loki/config.yaml -target=write"
+        ports:
+          - 3102:3100
+          - 7946
+          - 9095
+        volumes:
+          - ../observability/loki/loki-config.yaml:/etc/loki/config.yaml
+        healthcheck:
+          test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1" ]
+          interval: 10s
+          timeout: 5s
+          retries: 5
+        depends_on:
+          - minio
+        networks:
+          <<: *loki-dns
+
+      alloy:
+        image: grafana/alloy:latest
+        volumes:
+          - ../observability/alloy/alloy-local-config.yaml:/etc/alloy/config.alloy:ro
+          - /var/run/docker.sock:/var/run/docker.sock
+        command:  run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
+        ports:
+          - 12345:12345
+        depends_on:
+          - gateway
+        extends:
+          file: common-config.yml
+          service: network-deploy-service
+
+      minio:
+        image: minio/minio
+        entrypoint:
+          - sh
+          - -euc
+          - |
+            mkdir -p /data/loki-data && \
+            mkdir -p /data/loki-ruler && \
+            minio server /data
+        environment:
+          - MINIO_ROOT_USER=loki
+          - MINIO_ROOT_PASSWORD=supersecret
+          - MINIO_PROMETHEUS_AUTH_TYPE=public
+          - MINIO_UPDATE=off
+        ports:
+          - 9000
+        volumes:
+          - ./.data/minio:/data
+        healthcheck:
+          test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
+          interval: 15s
+          timeout: 20s
+          retries: 5
+        extends:
+          file: common-config.yml
+          service: network-deploy-service
+
+      prometheus:
+        image: prom/prometheus:v3.1.0
+        container_name: prometheus
+        ports:
+         - "9090:9090"
+        volumes:
+         - ../observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+        extends:
+         file: common-config.yml
+         service: network-deploy-service
+        
+      grafana:
+        image: grafana/grafana:latest
+        environment:
+          - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+          - GF_AUTH_ANONYMOUS_ENABLED=true
+          - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+        depends_on:
+          - gateway
+        entrypoint:
+          - sh
+          - -euc
+          - |
+            /run.sh
+        ports:
+         - "3000:3000"
+        volumes:
+         - ../observability/grafana/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
+        healthcheck:
+          test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1" ]
+          interval: 10s
+          timeout: 5s
+          retries: 5
+        extends:
+          file: common-config.yml
+          service: network-deploy-service
+
+      backend:
+        image: grafana/loki:latest
+        volumes:
+          - ../observability/loki/loki-config.yaml:/etc/loki/config.yaml
+        ports:
+          - "3100"
+          - "7946"
+        command: "-config.file=/etc/loki/config.yaml -target=backend -legacy-read-mode=false"
+        depends_on:
+          - gateway
+        extends:
+          file: common-config.yml
+          service: network-deploy-service
+        
+
+      gateway:
+        image: nginx:latest
+        depends_on:
+          - read
+          - write
+        entrypoint:
+          - sh
+          - -euc
+          - |
+            cat <<EOF > /etc/nginx/nginx.conf
+            user  nginx;
+            worker_processes  5;  ## Default: 1
+
+            events {
+              worker_connections   1000;
+            }
+
+            http {
+              resolver 127.0.0.11;
+
+              server {
+                listen             3100;
+
+                location = / {
+                  return 200 'OK';
+                  auth_basic off;
+                }
+
+                location = /api/prom/push {
+                  proxy_pass       http://write:3100\$$request_uri;
+                }
+
+                location = /api/prom/tail {
+                  proxy_pass       http://read:3100\$$request_uri;
+                  proxy_set_header Upgrade \$$http_upgrade;
+                  proxy_set_header Connection "upgrade";
+                }
+
+                location ~ /api/prom/.* {
+                  proxy_pass       http://read:3100\$$request_uri;
+                }
+
+                location = /loki/api/v1/push {
+                  proxy_pass       http://write:3100\$$request_uri;
+                }
+
+                location = /loki/api/v1/tail {
+                  proxy_pass       http://read:3100\$$request_uri;
+                  proxy_set_header Upgrade \$$http_upgrade;
+                  proxy_set_header Connection "upgrade";
+                }
+
+                location ~ /loki/api/.* {
+                  proxy_pass       http://read:3100\$$request_uri;
+                }
+              }
+            }
+            EOF
+            /docker-entrypoint.sh nginx -g "daemon off;"
+        ports:
+          - "3100:3100"
+        healthcheck:
+          test: ["CMD", "service", "nginx", "status"]
+          interval: 10s
+          timeout: 5s
+          retries: 5
+        extends:
+          file: common-config.yml
+          service: network-deploy-service
+
+      ms-config-server:
+        image: "dhandapaniks/ms-config-server:0.0.6"
+        container_name: "ms-config-server"
+        ports:
+          - "8071:8071"
+        healthcheck:
+          test: "curl --fail --silent localhost:8071/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+          interval: 10s
+          timeout: 5s # In each check, it has to wait for 5 seconds
+          retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+          start_period: 10s # Execute health check command or api only after 10 seconds
+        extends:
+          file: common-config.yml
+          service: microservice-base-config
+        environment:
+          SPRING_APPLICATION_NAME: "ms-config-server"
+
+          
+      ms-eurekaserver:
+        image: "dhandapaniks/ms-eurekaserver:0.0.6"
+        container_name: "ms-eurekaserver"
+        ports:
+          - "8070:8070"
+        depends_on:
+          ms-config-server:
+            condition: service_healthy
+        healthcheck:
+          test: "curl --fail --silent localhost:8070/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+          interval: 10s
+          timeout: 5s # In each check, it has to wait for 5 seconds
+          retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+          start_period: 10s # Execute health check command or api only after 10 seconds
+        extends:
+          file: common-config.yml
+          service: microservice-configserver-config
+        environment:
+          SPRING_APPLICATION_NAME: "ms-eurekaserver"
+
+      ms-accounts:
+        image: "dhandapaniks/ms-accounts:0.0.6"
+        container_name: "ms-accounts"
+        ports:
+          - "8080:8080"
+        depends_on:
+          ms-config-server:
+            condition: service_healthy
+          ms-eurekaserver:
+            condition: service_healthy
+        healthcheck:
+          test: "curl --fail --silent localhost:8080/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+          interval: 10s
+          timeout: 5s # In each check, it has to wait for 5 seconds
+          retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+          start_period: 10s # Execute health check command or api only after 10 seconds
+        environment:
+          SPRING_APPLICATION_NAME: "ms-accounts"
+        extends:
+          file: common-config.yml
+          service: microservice-eurekaserver-config
+
+      ms-loans:
+        image: "dhandapaniks/ms-loans:0.0.6"
+        container_name: "ms-loans"
+        ports:
+          - "8090:8090"
+        depends_on:
+          ms-config-server:
+            condition: service_healthy
+          ms-eurekaserver:
+            condition: service_healthy
+        healthcheck:
+          test: "curl --fail --silent localhost:8090/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+          interval: 10s
+          timeout: 5s # In each check, it has to wait for 5 seconds
+          retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+          start_period: 10s # Execute health check command or api only after 10 seconds
+        environment:
+          SPRING_APPLICATION_NAME: "ms-loans"
+        extends:
+          file: common-config.yml
+          service: microservice-eurekaserver-config
+
+      ms-cards:
+        image: "dhandapaniks/ms-cards:0.0.6"
+        container_name: "ms-cards"
+        ports:
+          - "9000:9000"
+        depends_on:
+          ms-config-server:
+            condition: service_healthy
+          ms-eurekaserver:
+            condition: service_healthy
+        healthcheck:
+          test: "curl --fail --silent localhost:9000/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+          interval: 10s
+          timeout: 5s # In each check, it has to wait for 5 seconds
+          retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+          start_period: 10s # Execute health check command or api only after 10 seconds
+        environment:
+          SPRING_APPLICATION_NAME: "ms-cards"
+        extends:
+          file: common-config.yml
+          service: microservice-eurekaserver-config
+          
+      ms-gateway-server:
+        image: "dhandapaniks/ms-gateway-server:0.0.6"
+        container_name: "ms-gateway-server"
+        ports:
+          - "8072:8072"
+        depends_on:
+          ms-accounts:
+            condition: service_healthy
+          ms-loans:
+            condition: service_healthy
+          ms-cards:
+            condition: service_healthy
+        environment:
+          SPRING_APPLICATION_NAME: "ms-gateway-server"
+        extends:
+          file: common-config.yml
+          service: microservice-eurekaserver-config
+
+    networks:
+      dhandapaniks-xyzbank-msntwrk:
+        driver: "bridge"  
+
+Step 9: Regenerate the images with the new changes (ms-accounts, ms-loans, ms-cards, ms-config-server, ms-eurekaserver, ms-gateway-server)
+
+    PS D:\STS_WS\Observability-and-Monitoring\ms-accounts> mvn compile jib:dockerBuild
+
+    PS D:\STS_WS\Observability-and-Monitoring\ms-cards> mvn compile jib:dockerBuild
+
+    PS D:\STS_WS\Observability-and-Monitoring\ms-loans> mvn compile jib:dockerBuild
+
+    PS D:\STS_WS\Observability-and-Monitoring\ms-config-server> mvn compile jib:dockerBuild
+
+    PS D:\STS_WS\Observability-and-Monitoring\ms-eurekaserver> mvn compile jib:dockerBuild
+
+    PS D:\STS_WS\Observability-and-Monitoring\ms-gateway-server> mvn compile jib:dockerBuild
+
+Step 10: Run 'docker compose up -d' from a prod profile
+
+    PS D:\STS_WS\Observability-and-Monitoring\docker-compose\prod> docker compose up -d
+    [+] Running 66/66
+     ✔ minio Pulled                                                                                                                68.9s
+     ✔ write Pulled                                                                                                                18.6s
+     ✔ gateway Pulled                                                                                                              24.6s
+     ✔ prometheus Pulled                                                                                                           53.9s
+     ✔ backend Pulled                                                                                                              18.6s
+     ✔ alloy Pulled                                                                                                                65.5s
+     ✔ read Pulled                                                                                                                 18.6s
+     ✔ grafana Pulled                                                                                                             104.0s
+
+    [+] Running 15/15
+     ✔ Network prod_dhandapaniks-xyzbank-msntwrk  Created                                                                           0.1s
+     ✔ Container ms-config-server                 Healthy                                                                          12.5s
+     ✔ Container prod-minio-1                     Started                                                                           1.2s
+     ✔ Container prometheus                       Started                                                                           1.2s
+     ✔ Container ms-eurekaserver                  Healthy                                                                          22.1s
+     ✔ Container prod-read-1                      Started                                                                           1.3s
+     ✔ Container prod-write-1                     Started                                                                           1.4s
+     ✔ Container ms-loans                         Healthy                                                                          53.5s
+     ✔ Container ms-cards                         Healthy                                                                          53.5s
+     ✔ Container ms-accounts                      Healthy                                                                          53.0s
+     ✔ Container prod-gateway-1                   Started                                                                           1.7s
+     ✔ Container prod-backend-1                   Started                                                                           2.1s
+     ✔ Container prod-grafana-1                   Started                                                                           2.2s
+     ✔ Container prod-alloy-1                     Started                                                                           2.2s
+     ✔ Container ms-gateway-server                Started                                                                          53.7s
+
+Make sure all the services are started properly
+
+Step 11: Verify Prometheus targets
+
+To see prometheus targets - http://localhost:9090/targets (9090 is the port where prometheus runs)
+
+Step 12: Verify integration between Prometheus and Grafana
+
+Access Grafana at port 3000: http://localhost:3000/
+
+To access Data sources: Connections -> Data sources
+
+We should be able to see two connections: Loki and Prometheus
+
+With Loki, we can search the logs, and with Prometheus, we can search the metrics.
+
+>>> Using Grafana's pre-build dashboards
+----------------------------------------
+
+We can access the available dashboards from here: https://grafana.com/grafana/dashboards/
+
+Examples: 
+
+https://grafana.com/grafana/dashboards/4701-jvm-micrometer/
+https://grafana.com/grafana/dashboards/11378-justai-system-monitor/
+
+Login to Grafana using the default credentials: admin:admin
+
+Create a new dashboard using the import option and select the appropriate Prometheus data source.
+
+>>> Create Alerts and Send Notifications using Grafana (Approach 1)
+-------------------------------------------------------------------
+
+Use Alert rules from Alerting menu.
+
+>>> Distributed Tracing in Microservices
+----------------------------------------
+
+Event logs, health probes, and metrics provide valuable insights into an application's internal state. However, they do not address the distributed nature of cloud-native applications, where a user request may pass through multiple services. Currently, we lack effective means to correlate data across these boundaries.
+
+Distributed tracing is a method used in microservices to track and analyze how requests flow across different services. It helps to identify performance issues and diagnose problems in complex systems.
+
+One effective solution is to use a unique identifier called a correlation ID for each request generated at the entry point of the system. This ID should be used in logs and passed to other services involved in handling the request, enabling us to retrieve all related logs from different applications.
+
+Distributed tracing has three main components:
+
+1. Tag: Additional metadata providing details about the request context, such as the request URI or the authenticated user.
+
+2. Trace ID: A unique ID representing the entire sequence of actions related to a request or transaction, consisting of multiple spans across services.
+
+3. Span ID: Each stage of request processing is represented as a span, which includes timestamps and is identified by the combination of trace ID and span ID.
+
+>>> Implementing Distributed Tracing with OpenTelemetry
+
+https://opentelemetry.io/docs/getting-started/
+
+1. OpenTelemetry (OTel): A vendor-neutral, open-source framework that automatically generates traces and spans for collecting and exporting telemetry data, including traces, metrics, and logs.
+
+2. Tempo: An open-source, scalable backend designed for observability, part of the Grafana stack, for efficient storage, retrieval, and analysis of trace data.
+
+3. Grafana: Connects to Tempo as a data source to visualize distributed tracking. It can also integrate with Loki to directly access tracing details from logs.
+
+Step 1: Update the OpenTelemetry version in the properties tag of the `pom.xml` for `ms-accounts`, `ms-cards`, `ms-loans`, `ms-eurekaserver`, `ms-gateway-server`, and `ms-config-server`.
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<java.version>21</java.version>
+		<maven.compiler.source>21</maven.compiler.source>
+		<maven.compiler.target>21</maven.compiler.target>
+		<spring-cloud.version>2024.0.0</spring-cloud.version>
+		<otelVersion>2.22.0</otelVersion>
+	</properties>
+
+Step 2: Add 'Open Telemetry Java Agent' dependency to pom.xml of ms-accounts, ms-cards, ms-loans, ms-eurekaserver, ms-gateway-server, and ms-config-server
+
+	<dependency>
+		<groupId>io.opentelemetry.javaagent</groupId>
+		<artifactId>opentelemetry-javaagent</artifactId>
+		<version>${otelVersion}</version>
+		<scope>runtime</scope>
+	</dependency>
+
+Step 3: Add the following property to application.properties  of ms-accounts, ms-cards, ms-loans, ms-eurekaserver, ms-gateway-server, and ms-config-server
+
+	# For Distributed Tracing using Open Telemetry, we are customizing the log pattern to include trace id and span id in each log statement
+	logging.pattern.level=%5p [${spring.application.name},%X{trace_id},%X{span_id}]
+
+The first pattern which is %5p indicates I want to assign some file length characters before the application name. Inside this five length character Opentelemetry can try to generate some log severity, like the log is debug, info, or warning or error.
+
+Step 4: Update the following APIs that prints the Correlation ID
+
+	CustomerController - fetchCustomerDetailByMobileNumber - Removed Correlation ID related logs
+
+		@Operation(summary = "Fetch Customer Detail by Mobile Number", description = "REST API to get Customer Detail by Mobile Number")
+		@ApiResponses({ @ApiResponse(responseCode = "200", description = "HTTP Status OK"),
+				@ApiResponse(responseCode = "500", description = "HTTP Status Internal Server Error", content = @Content(schema = @Schema(implementation = ErrorResponseDto.class))) })
+		@GetMapping(path = "/fetch")
+		public ResponseEntity<CustomerDetailDto> fetchCustomerDetailByMobileNumber(
+				@RequestHeader("xyzbank-correlation-id") String correlationId,
+				@RequestParam @Pattern(regexp = "(^$|[0-9]{10})", message = "Mobile number must be 10 digits") String mobileNumber) {
+			logger.debug("fetchCustomerDetailByMobileNumber start");
+			CustomerDetailDto customerDetailDto = iCustomerService.fetchCustomerDetailByMobileNumber(mobileNumber, correlationId);
+			logger.debug("fetchCustomerDetailByMobileNumber end");
+			return ResponseEntity.status(HttpStatus.OK).body(customerDetailDto);
+		}
+
+	LoanController - fetchLoanDetailByMobileNumber - Removed Correlation ID related logs
+
+		@Operation(summary = "Fetch Loan Details by Mobile Number", description = "REST API to fetch loan details by mobile number")
+		@ApiResponses({ @ApiResponse(responseCode = "200", description = "HTTP Status Successful"),
+				@ApiResponse(responseCode = "404", description = "HTTP Status Not Found"),
+				@ApiResponse(responseCode = "500", description = "HTTP Status Internal Server Error") })
+		@GetMapping(path = "/fetch")
+		public ResponseEntity<LoanDto> fetchLoanDetailByMobileNumber(
+				@RequestHeader("xyzbank-correlation-id") String correlationId,
+				@RequestParam @Pattern(regexp = "(^$|[0-9]{10})", message = "Mobile Number should be 10 digits") String mobileNumber) {
+			logger.debug("fetchLoanDetailByMobileNumber start");
+			LoanDto fetchedLoan = loanService.fetchLoanByMobileNumber(mobileNumber);
+			logger.debug("fetchLoanDetailByMobileNumber end");
+			return ResponseEntity.status(HttpStatus.OK).body(fetchedLoan);
+
+		}
+
+	CardController - fetchCardByMobileNumber - Removed Correlation ID related logs
+
+		@Operation(summary = "Fetch Card Details by Mobile Number", description = "REST API to fetch card details by mobile number")
+		@ApiResponses({ @ApiResponse(responseCode = "200", description = "HTTP Status Successful"),
+				@ApiResponse(responseCode = "404", description = "HTTP Status Not Found"),
+				@ApiResponse(responseCode = "500", description = "HTTP Status Internal Server Error") })
+		@GetMapping(path = "/fetch")
+		public ResponseEntity<CardDto> fetchCardByMobileNumber(
+				@RequestHeader("xyzbank-correlation-id") String correlationId,
+				@RequestParam @Pattern(regexp = "(^$|[0-9]{10})", message = "Mobile Number must be 10 digits") String mobileNumber) {
+			logger.debug("fetchCardByMobileNumber start");
+			CardDto cardDto = cardService.fetchCardByMobileNumber(mobileNumber);
+			logger.debug("fetchCardByMobileNumber end");
+			return ResponseEntity.status(HttpStatus.CREATED).body(cardDto);
+		}
+
+Step 5: Add OpenTelemetry related environment variables to 'microservice-base-config' present inside 'common-config.yml'
+
+	common-config.yml
+
+	  microservice-base-config:
+	    extends:
+	      service: network-deploy-service
+	    deploy:
+	      resources:
+	        limits:
+	          memory: 700m
+	    environment:
+	      JAVA_TOOL_OPTIONS: "-javaagent:/app/libs/opentelemetry-javaagent-2.22.0.jar" # Path to OpenTelemetry Java Agent
+	      OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4318 # OpenTelemetry Collector endpoint for OTLP
+	      OTEL_METRICS_EXPORTER: none # Disable metrics exporter if not needed
+	      OTEL_LOGS_EXPORTER: none # Disable logs exporter if not needed
+
+Step 6: Update the docker-compose.yml file with OpenTelemetry related changes
+
+Add the OTEL_SERVICE_NAME environment variable to all the services (ms-accounts, ms-loans, ms-cards, ms-config-server, ms-eurekaserver, and ms-gateway-server)
+
+	docker-compose/prod/docker-compose.yml
+
+		services:
+
+		  read:
+		    image: grafana/loki:3.1.2
+		    command: "-config.file=/etc/loki/config.yaml -target=read"
+		    ports:
+		      - 3101:3100
+		      - 7946
+		      - 9095
+		    volumes:
+		      - ../observability/loki/loki-config.yaml:/etc/loki/config.yaml
+		    depends_on:
+		      - minio
+		    healthcheck:
+		      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1" ]
+		      interval: 10s
+		      timeout: 5s
+		      retries: 5
+		    networks: &loki-dns
+		      dhandapaniks-xyzbank-msntwrk:
+		        aliases:
+		          - loki
+
+		  write:
+		    image: grafana/loki:3.1.2
+		    command: "-config.file=/etc/loki/config.yaml -target=write"
+		    ports:
+		      - 3102:3100
+		      - 7946
+		      - 9095
+		    volumes:
+		      - ../observability/loki/loki-config.yaml:/etc/loki/config.yaml
+		    healthcheck:
+		      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1" ]
+		      interval: 10s
+		      timeout: 5s
+		      retries: 5
+		    depends_on:
+		      - minio
+		    networks:
+		      <<: *loki-dns
+
+		  alloy:
+		    image: grafana/alloy:v1.5.1
+		    volumes:
+		      - ../observability/alloy/alloy-local-config.yaml:/etc/alloy/config.alloy:ro
+		      - /var/run/docker.sock:/var/run/docker.sock
+		    command: run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
+		    ports:
+		      - 12345:12345
+		    depends_on:
+		      - gateway
+		    extends:
+		      file: common-config.yml
+		      service: network-deploy-service
+
+		  minio:
+		    image: minio/minio:RELEASE.2024-12-18T13-15-44Z
+		    entrypoint:
+		      - sh
+		      - -euc
+		      - |
+		        mkdir -p /data/loki-data && \
+		        mkdir -p /data/loki-ruler && \
+		        minio server /data
+		    environment:
+		      - MINIO_ROOT_USER=loki
+		      - MINIO_ROOT_PASSWORD=supersecret
+		      - MINIO_PROMETHEUS_AUTH_TYPE=public
+		      - MINIO_UPDATE=off
+		    ports:
+		      - 9000
+		    volumes:
+		      - ./.data/minio:/data
+		    healthcheck:
+		      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
+		      interval: 15s
+		      timeout: 20s
+		      retries: 5
+		    extends:
+		      file: common-config.yml
+		      service: network-deploy-service
+
+		  prometheus:
+		    image: prom/prometheus:v3.1.0
+		    container_name: prometheus
+		    ports:
+		     - "9090:9090"
+		    volumes:
+		     - ../observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+		    extends:
+		     file: common-config.yml
+		     service: network-deploy-service
+		    
+		  grafana:
+		    image: grafana/grafana:11.4.0
+		    environment:
+		      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+		      - GF_AUTH_ANONYMOUS_ENABLED=true
+		      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+		    depends_on:
+		      - gateway
+		    entrypoint:
+		      - sh
+		      - -euc
+		      - |
+		        /run.sh
+		    ports:
+		     - "3000:3000"
+		    volumes:
+		     - ../observability/grafana/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
+		    healthcheck:
+		      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1" ]
+		      interval: 10s
+		      timeout: 5s
+		      retries: 5
+		    extends:
+		      file: common-config.yml
+		      service: network-deploy-service
+
+		  backend:
+		    image: grafana/loki:3.1.2
+		    volumes:
+		      - ../observability/loki/loki-config.yaml:/etc/loki/config.yaml
+		    ports:
+		      - "3100"
+		      - "7946"
+		    command: "-config.file=/etc/loki/config.yaml -target=backend -legacy-read-mode=false"
+		    depends_on:
+		      - gateway
+		    extends:
+		      file: common-config.yml
+		      service: network-deploy-service
+		    
+
+		  gateway:
+		    image: nginx:1.27.3
+		    depends_on:
+		      - read
+		      - write
+		    entrypoint:
+		      - sh
+		      - -euc
+		      - |
+		        cat <<EOF > /etc/nginx/nginx.conf
+		        user  nginx;
+		        worker_processes  5;  ## Default: 1
+
+		        events {
+		          worker_connections   1000;
+		        }
+
+		        http {
+		          resolver 127.0.0.11;
+
+		          server {
+		            listen             3100;
+
+		            location = / {
+		              return 200 'OK';
+		              auth_basic off;
+		            }
+
+		            location = /api/prom/push {
+		              proxy_pass       http://write:3100\$$request_uri;
+		            }
+
+		            location = /api/prom/tail {
+		              proxy_pass       http://read:3100\$$request_uri;
+		              proxy_set_header Upgrade \$$http_upgrade;
+		              proxy_set_header Connection "upgrade";
+		            }
+
+		            location ~ /api/prom/.* {
+		              proxy_pass       http://read:3100\$$request_uri;
+		            }
+
+		            location = /loki/api/v1/push {
+		              proxy_pass       http://write:3100\$$request_uri;
+		            }
+
+		            location = /loki/api/v1/tail {
+		              proxy_pass       http://read:3100\$$request_uri;
+		              proxy_set_header Upgrade \$$http_upgrade;
+		              proxy_set_header Connection "upgrade";
+		            }
+
+		            location ~ /loki/api/.* {
+		              proxy_pass       http://read:3100\$$request_uri;
+		            }
+		          }
+		        }
+		        EOF
+		        /docker-entrypoint.sh nginx -g "daemon off;"
+		    ports:
+		      - "3100:3100"
+		    healthcheck:
+		      test: ["CMD", "service", "nginx", "status"]
+		      interval: 10s
+		      timeout: 5s
+		      retries: 5
+		    extends:
+		      file: common-config.yml
+		      service: network-deploy-service
+
+		  ms-config-server:
+		    image: "dhandapaniks/ms-config-server:0.0.6"
+		    container_name: "ms-config-server"
+		    ports:
+		      - "8071:8071"
+		    healthcheck:
+		      test: "curl --fail --silent localhost:8071/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+		      interval: 10s
+		      timeout: 5s # In each check, it has to wait for 5 seconds
+		      retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+		      start_period: 10s # Execute health check command or api only after 10 seconds
+		    extends:
+		      file: common-config.yml
+		      service: microservice-base-config
+		    environment:
+		      SPRING_APPLICATION_NAME: "ms-config-server" # Spring Application Name
+		      OTEL_SERVICE_NAME: "ms-config-server" # OpenTelemetry Service Name
+
+		      
+		  ms-eurekaserver:
+		    image: "dhandapaniks/ms-eurekaserver:0.0.6"
+		    container_name: "ms-eurekaserver"
+		    ports:
+		      - "8070:8070"
+		    depends_on:
+		      ms-config-server:
+		        condition: service_healthy
+		    healthcheck:
+		      test: "curl --fail --silent localhost:8070/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+		      interval: 10s
+		      timeout: 5s # In each check, it has to wait for 5 seconds
+		      retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+		      start_period: 10s # Execute health check command or api only after 10 seconds
+		    extends:
+		      file: common-config.yml
+		      service: microservice-configserver-config
+		    environment:
+		      SPRING_APPLICATION_NAME: "ms-eurekaserver"
+		      OTEL_SERVICE_NAME: "ms-eurekaserver" # OpenTelemetry Service Name
+
+		  ms-accounts:
+		    image: "dhandapaniks/ms-accounts:0.0.6"
+		    container_name: "ms-accounts"
+		    ports:
+		      - "8080:8080"
+		    depends_on:
+		      ms-config-server:
+		        condition: service_healthy
+		      ms-eurekaserver:
+		        condition: service_healthy
+		    healthcheck:
+		      test: "curl --fail --silent localhost:8080/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+		      interval: 10s
+		      timeout: 5s # In each check, it has to wait for 5 seconds
+		      retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+		      start_period: 10s # Execute health check command or api only after 10 seconds
+		    environment:
+		      SPRING_APPLICATION_NAME: "ms-accounts"
+		      OTEL_SERVICE_NAME: "ms-accounts" # OpenTelemetry Service Name
+		    extends:
+		      file: common-config.yml
+		      service: microservice-eurekaserver-config
+
+		  ms-loans:
+		    image: "dhandapaniks/ms-loans:0.0.6"
+		    container_name: "ms-loans"
+		    ports:
+		      - "8090:8090"
+		    depends_on:
+		      ms-config-server:
+		        condition: service_healthy
+		      ms-eurekaserver:
+		        condition: service_healthy
+		    healthcheck:
+		      test: "curl --fail --silent localhost:8090/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+		      interval: 10s
+		      timeout: 5s # In each check, it has to wait for 5 seconds
+		      retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+		      start_period: 10s # Execute health check command or api only after 10 seconds
+		    environment:
+		      SPRING_APPLICATION_NAME: "ms-loans"
+		      OTEL_SERVICE_NAME: "ms-loans" # OpenTelemetry Service Name
+		    extends:
+		      file: common-config.yml
+		      service: microservice-eurekaserver-config
+
+		  ms-cards:
+		    image: "dhandapaniks/ms-cards:0.0.6"
+		    container_name: "ms-cards"
+		    ports:
+		      - "9000:9000"
+		    depends_on:
+		      ms-config-server:
+		        condition: service_healthy
+		      ms-eurekaserver:
+		        condition: service_healthy
+		    healthcheck:
+		      test: "curl --fail --silent localhost:9000/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+		      interval: 10s
+		      timeout: 5s # In each check, it has to wait for 5 seconds
+		      retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+		      start_period: 10s # Execute health check command or api only after 10 seconds
+		    environment:
+		      SPRING_APPLICATION_NAME: "ms-cards"
+		      OTEL_SERVICE_NAME: "ms-cards" # OpenTelemetry Service Name
+		    extends:
+		      file: common-config.yml
+		      service: microservice-eurekaserver-config
+		      
+		  ms-gateway-server:
+		    image: "dhandapaniks/ms-gateway-server:0.0.6"
+		    container_name: "ms-gateway-server"
+		    ports:
+		      - "8072:8072"
+		    depends_on:
+		      ms-accounts:
+		        condition: service_healthy
+		      ms-loans:
+		        condition: service_healthy
+		      ms-cards:
+		        condition: service_healthy
+		    environment:
+		      SPRING_APPLICATION_NAME: "ms-gateway-server"
+		      OTEL_SERVICE_NAME: "ms-gateway-server" # OpenTelemetry Service Name
+		    extends:
+		      file: common-config.yml
+		      service: microservice-eurekaserver-config
+
+		networks:
+		  dhandapaniks-xyzbank-msntwrk:
+		    driver: "bridge"  
+
+Step 7: Create a file named 'tempo.yml' under 'docker-copose/observability'
+
+	tempo.yml
+
+		server:
+		  http_listen_port: 3100 # Default port for Tempo
+		  http_listen_address: 0.0.0.0 # Listen on all interfaces
+
+		distributor:
+		  receivers:
+		    otlp:
+		      protocols:
+		        grpc:
+		          endpoint: 0.0.0.0:4317 # OTLP gRPC endpoint
+		        http:
+		          endpoint: 0.0.0.0:4318 # OTLP HTTP endpoint
+
+		ingester:
+		  trace_idle_period: 10s # Idle period for traces
+		  max_block_bytes: 1_000_000 # Maximum block size
+		  max_block_duration: 5m # Maximum block duration
+
+		compactor:
+		  compaction:
+		    compaction_window: 1h # Compaction window duration
+		    max_compaction_objects: 1000000 # Maximum objects for compaction
+		    block_retention: 1h # Block retention duration
+		    compacted_block_retention: 10m # Compacted block retention duration
+
+		storage:
+		  trace:
+		    backend: local # Local storage backend
+		    local:
+		      path: /tmp/tempo/blocks # Path for local storage
+		    pool:
+		      max_workers: 100 # Maximum workers for storage pool
+		      queue_depth: 10000 # Queue depth for storage pool
+
+Step 8: Add a new service called 'tempo' to 'docker-compose/prod/docker-compose.yml'
+
+	Updated content of 'docker-compose/prod/docker-compose.yml'
+
+		services:
+
+		  read:
+		    image: grafana/loki:3.1.2
+		    command: "-config.file=/etc/loki/config.yaml -target=read"
+		    ports:
+		      - 3101:3100
+		      - 7946
+		      - 9095
+		    volumes:
+		      - ../observability/loki/loki-config.yaml:/etc/loki/config.yaml
+		    depends_on:
+		      - minio
+		    healthcheck:
+		      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1" ]
+		      interval: 10s
+		      timeout: 5s
+		      retries: 5
+		    networks: &loki-dns
+		      dhandapaniks-xyzbank-msntwrk:
+		        aliases:
+		          - loki
+
+		  write:
+		    image: grafana/loki:3.1.2
+		    command: "-config.file=/etc/loki/config.yaml -target=write"
+		    ports:
+		      - 3102:3100
+		      - 7946
+		      - 9095
+		    volumes:
+		      - ../observability/loki/loki-config.yaml:/etc/loki/config.yaml
+		    healthcheck:
+		      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1" ]
+		      interval: 10s
+		      timeout: 5s
+		      retries: 5
+		    depends_on:
+		      - minio
+		    networks:
+		      <<: *loki-dns
+
+		  alloy:
+		    image: grafana/alloy:v1.5.1
+		    volumes:
+		      - ../observability/alloy/alloy-local-config.yaml:/etc/alloy/config.alloy:ro
+		      - /var/run/docker.sock:/var/run/docker.sock
+		    command: run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
+		    ports:
+		      - 12345:12345
+		    depends_on:
+		      - gateway
+		    extends:
+		      file: common-config.yml
+		      service: network-deploy-service
+
+		  minio:
+		    image: minio/minio:RELEASE.2024-12-18T13-15-44Z
+		    entrypoint:
+		      - sh
+		      - -euc
+		      - |
+		        mkdir -p /data/loki-data && \
+		        mkdir -p /data/loki-ruler && \
+		        minio server /data
+		    environment:
+		      - MINIO_ROOT_USER=loki
+		      - MINIO_ROOT_PASSWORD=supersecret
+		      - MINIO_PROMETHEUS_AUTH_TYPE=public
+		      - MINIO_UPDATE=off
+		    ports:
+		      - 9000
+		    volumes:
+		      - ./.data/minio:/data
+		    healthcheck:
+		      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
+		      interval: 15s
+		      timeout: 20s
+		      retries: 5
+		    extends:
+		      file: common-config.yml
+		      service: network-deploy-service
+
+		  prometheus:
+		    image: prom/prometheus:v3.1.0
+		    container_name: prometheus
+		    ports:
+		     - "9090:9090"
+		    volumes:
+		     - ../observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+		    extends:
+		     file: common-config.yml
+		     service: network-deploy-service
+
+		  tempo:
+		    image: grafana/tempo:2.9.0
+		    container_name: tempo
+		    command: -config.file /etc/tempo-config.yml
+		    ports:
+		      - "3110:3100"
+		      - "4318:4318"
+		    volumes:
+		      - ../observability/tempo/tempo.yml:/etc/tempo-config.yml
+		    extends:
+		      file: common-config.yml
+		      service: network-deploy-service   
+
+		  grafana:
+		    image: grafana/grafana:11.4.0
+		    environment:
+		      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+		      - GF_AUTH_ANONYMOUS_ENABLED=true
+		      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+		    depends_on:
+		      - gateway
+		    entrypoint:
+		      - sh
+		      - -euc
+		      - |
+		        /run.sh
+		    ports:
+		     - "3000:3000"
+		    volumes:
+		     - ../observability/grafana/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
+		    healthcheck:
+		      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1" ]
+		      interval: 10s
+		      timeout: 5s
+		      retries: 5
+		    extends:
+		      file: common-config.yml
+		      service: network-deploy-service
+
+		  backend:
+		    image: grafana/loki:3.1.2
+		    volumes:
+		      - ../observability/loki/loki-config.yaml:/etc/loki/config.yaml
+		    ports:
+		      - "3100"
+		      - "7946"
+		    command: "-config.file=/etc/loki/config.yaml -target=backend -legacy-read-mode=false"
+		    depends_on:
+		      - gateway
+		    extends:
+		      file: common-config.yml
+		      service: network-deploy-service
+		    
+
+		  gateway:
+		    image: nginx:1.27.3
+		    depends_on:
+		      - read
+		      - write
+		    entrypoint:
+		      - sh
+		      - -euc
+		      - |
+		        cat <<EOF > /etc/nginx/nginx.conf
+		        user  nginx;
+		        worker_processes  5;  ## Default: 1
+
+		        events {
+		          worker_connections   1000;
+		        }
+
+		        http {
+		          resolver 127.0.0.11;
+
+		          server {
+		            listen             3100;
+
+		            location = / {
+		              return 200 'OK';
+		              auth_basic off;
+		            }
+
+		            location = /api/prom/push {
+		              proxy_pass       http://write:3100\$$request_uri;
+		            }
+
+		            location = /api/prom/tail {
+		              proxy_pass       http://read:3100\$$request_uri;
+		              proxy_set_header Upgrade \$$http_upgrade;
+		              proxy_set_header Connection "upgrade";
+		            }
+
+		            location ~ /api/prom/.* {
+		              proxy_pass       http://read:3100\$$request_uri;
+		            }
+
+		            location = /loki/api/v1/push {
+		              proxy_pass       http://write:3100\$$request_uri;
+		            }
+
+		            location = /loki/api/v1/tail {
+		              proxy_pass       http://read:3100\$$request_uri;
+		              proxy_set_header Upgrade \$$http_upgrade;
+		              proxy_set_header Connection "upgrade";
+		            }
+
+		            location ~ /loki/api/.* {
+		              proxy_pass       http://read:3100\$$request_uri;
+		            }
+		          }
+		        }
+		        EOF
+		        /docker-entrypoint.sh nginx -g "daemon off;"
+		    ports:
+		      - "3100:3100"
+		    healthcheck:
+		      test: ["CMD", "service", "nginx", "status"]
+		      interval: 10s
+		      timeout: 5s
+		      retries: 5
+		    extends:
+		      file: common-config.yml
+		      service: network-deploy-service
+
+		  ms-config-server:
+		    image: "dhandapaniks/ms-config-server:0.0.6"
+		    container_name: "ms-config-server"
+		    ports:
+		      - "8071:8071"
+		    healthcheck:
+		      test: "curl --fail --silent localhost:8071/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+		      interval: 10s
+		      timeout: 5s # In each check, it has to wait for 5 seconds
+		      retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+		      start_period: 10s # Execute health check command or api only after 10 seconds
+		    extends:
+		      file: common-config.yml
+		      service: microservice-base-config
+		    environment:
+		      SPRING_APPLICATION_NAME: "ms-config-server" # Spring Application Name
+		      OTEL_SERVICE_NAME: "ms-config-server" # OpenTelemetry Service Name
+
+		      
+		  ms-eurekaserver:
+		    image: "dhandapaniks/ms-eurekaserver:0.0.6"
+		    container_name: "ms-eurekaserver"
+		    ports:
+		      - "8070:8070"
+		    depends_on:
+		      ms-config-server:
+		        condition: service_healthy
+		    healthcheck:
+		      test: "curl --fail --silent localhost:8070/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+		      interval: 10s
+		      timeout: 5s # In each check, it has to wait for 5 seconds
+		      retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+		      start_period: 10s # Execute health check command or api only after 10 seconds
+		    extends:
+		      file: common-config.yml
+		      service: microservice-configserver-config
+		    environment:
+		      SPRING_APPLICATION_NAME: "ms-eurekaserver"
+		      OTEL_SERVICE_NAME: "ms-eurekaserver" # OpenTelemetry Service Name
+
+		  ms-accounts:
+		    image: "dhandapaniks/ms-accounts:0.0.6"
+		    container_name: "ms-accounts"
+		    ports:
+		      - "8080:8080"
+		    depends_on:
+		      ms-config-server:
+		        condition: service_healthy
+		      ms-eurekaserver:
+		        condition: service_healthy
+		    healthcheck:
+		      test: "curl --fail --silent localhost:8080/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+		      interval: 10s
+		      timeout: 5s # In each check, it has to wait for 5 seconds
+		      retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+		      start_period: 10s # Execute health check command or api only after 10 seconds
+		    environment:
+		      SPRING_APPLICATION_NAME: "ms-accounts"
+		      OTEL_SERVICE_NAME: "ms-accounts" # OpenTelemetry Service Name
+		    extends:
+		      file: common-config.yml
+		      service: microservice-eurekaserver-config
+
+		  ms-loans:
+		    image: "dhandapaniks/ms-loans:0.0.6"
+		    container_name: "ms-loans"
+		    ports:
+		      - "8090:8090"
+		    depends_on:
+		      ms-config-server:
+		        condition: service_healthy
+		      ms-eurekaserver:
+		        condition: service_healthy
+		    healthcheck:
+		      test: "curl --fail --silent localhost:8090/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+		      interval: 10s
+		      timeout: 5s # In each check, it has to wait for 5 seconds
+		      retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+		      start_period: 10s # Execute health check command or api only after 10 seconds
+		    environment:
+		      SPRING_APPLICATION_NAME: "ms-loans"
+		      OTEL_SERVICE_NAME: "ms-loans" # OpenTelemetry Service Name
+		    extends:
+		      file: common-config.yml
+		      service: microservice-eurekaserver-config
+
+		  ms-cards:
+		    image: "dhandapaniks/ms-cards:0.0.6"
+		    container_name: "ms-cards"
+		    ports:
+		      - "9000:9000"
+		    depends_on:
+		      ms-config-server:
+		        condition: service_healthy
+		      ms-eurekaserver:
+		        condition: service_healthy
+		    healthcheck:
+		      test: "curl --fail --silent localhost:9000/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+		      interval: 10s
+		      timeout: 5s # In each check, it has to wait for 5 seconds
+		      retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+		      start_period: 10s # Execute health check command or api only after 10 seconds
+		    environment:
+		      SPRING_APPLICATION_NAME: "ms-cards"
+		      OTEL_SERVICE_NAME: "ms-cards" # OpenTelemetry Service Name
+		    extends:
+		      file: common-config.yml
+		      service: microservice-eurekaserver-config
+		      
+		  ms-gateway-server:
+		    image: "dhandapaniks/ms-gateway-server:0.0.6"
+		    container_name: "ms-gateway-server"
+		    ports:
+		      - "8072:8072"
+		    depends_on:
+		      ms-accounts:
+		        condition: service_healthy
+		      ms-loans:
+		        condition: service_healthy
+		      ms-cards:
+		        condition: service_healthy
+		    environment:
+		      SPRING_APPLICATION_NAME: "ms-gateway-server"
+		      OTEL_SERVICE_NAME: "ms-gateway-server" # OpenTelemetry Service Name
+		    extends:
+		      file: common-config.yml
+		      service: microservice-eurekaserver-config
+
+		networks:
+		  dhandapaniks-xyzbank-msntwrk:
+		    driver: "bridge"  
+Step 9: Provide integration information for Grafana and Tempo in 'observability/grafana/datasource.yml'
+
+Add 'tempo' as datasource
+
+	Updated content of 'observability/grafana/datasource.yml'
+
+		apiVersion: 1
+
+		deleteDatasources: # Deleting existing data sources
+		  - name: Prometheus
+		  - name: Loki
+		  - name: Tempo
+		  
+		datasources:
+		 - name: Prometheus
+		   type: prometheus
+		   uid: prometheus
+		   url: http://prometheus:9090
+		   access: proxy
+		   orgId: 1
+		   basicAuth: false
+		   isDefault: false
+		   version: 1
+		   editable: true
+		   jsonData:
+		    httpMethod: GET
+		 - name: Tempo
+		   type: tempo
+		   uid: tempo
+		   url: http://tempo:3100
+		   access: proxy
+		   orgId: 1
+		   basicAuth: false
+		   isDefault: false
+		   version: 1
+		   editable: true
+		   jsonData:
+		     httpMethod: GET
+		     serviceMap:
+		       datasourceUid: 'prometheus'
+		 - name: Loki
+		   type: loki
+		   uid: loki
+		   access: proxy
+		   orgId: 1
+		   editable: true
+		   url: http://gateway:3100
+		   jsonData:
+		    httpHeaderName1: "X-Scope-OrgID"
+		   secureJsonData:
+		    httpHeaderValue1: "tenant1"
+
+Step 10: Regenerate docker images to reflect the changes we added as part of OpenTelemetry
+
+    PS D:\STS_WS\Observability-and-Monitoring\ms-accounts> mvn compile jib:dockerBuild
+
+    PS D:\STS_WS\Observability-and-Monitoring\ms-cards> mvn compile jib:dockerBuild
+
+    PS D:\STS_WS\Observability-and-Monitoring\ms-loans> mvn compile jib:dockerBuild
+
+    PS D:\STS_WS\Observability-and-Monitoring\ms-config-server> mvn compile jib:dockerBuild
+
+    PS D:\STS_WS\Observability-and-Monitoring\ms-eurekaserver> mvn compile jib:dockerBuild
+
+    PS D:\STS_WS\Observability-and-Monitoring\ms-gateway-server> mvn compile jib:dockerBuild
+
+Step 11: Run 'docker compose up -d' from a prod profile
+
+Step 12: Verify the Tag, Correlation ID, and Span ID generation in the logs by invoking the 'Fetch Customer Details by Mobile Number' API of Customer Controller
+
+	API to call: http://localhost:8072/xyzbank/ms-accounts/api/customers/fetch?mobileNumber=4578905467
+
+	Logs from ms-accounts:
+
+		2025-12-15T15:52:05.888Z DEBUG [ms-accounts,11dc00a419d03c2060390024f5c4a6ac,062938e65adc7783] 1 --- [ms-accounts] [nio-8080-exec-5] c.d.m.controller.CustomerController      : fetchCustomerDetailByMobileNumber start
+
+		Hibernate: select c1_0.customer_id,c1_0.created_at,c1_0.created_by,c1_0.email,c1_0.mobile_numer,c1_0.name,c1_0.updated_at,c1_0.updated_by from customers c1_0 where c1_0.mobile_numer=?
+
+		Hibernate: select a1_0.account_number,a1_0.account_type,a1_0.branch_addres,a1_0.created_at,a1_0.created_by,a1_0.customer_id,a1_0.updated_at,a1_0.updated_by from accounts a1_0 where a1_0.customer_id=?
+
+		2025-12-15T15:52:06.330Z DEBUG [ms-accounts,11dc00a419d03c2060390024f5c4a6ac,062938e65adc7783] 1 --- [ms-accounts] [nio-8080-exec-5] c.d.m.controller.CustomerController      : fetchCustomerDetailByMobileNumber end
+
+	Logs from ms-cards:
+
+		2025-12-15T15:52:06.297Z DEBUG [ms-cards,11dc00a419d03c2060390024f5c4a6ac,e72c62ec5027a710] 1 --- [ms-cards] [nio-9000-exec-6] c.d.ms_cards.controller.CardController   : fetchCardByMobileNumber start
+
+		Hibernate: select c1_0.card_id,c1_0.amount_used,c1_0.available_amount,c1_0.card_number,c1_0.card_type,c1_0.created_at,c1_0.created_by,c1_0.mobile_number,c1_0.total_limit,c1_0.updated_at,c1_0.updated_by from cards c1_0 where c1_0.mobile_number=?
+
+		2025-12-15T15:52:06.314Z DEBUG [ms-cards,11dc00a419d03c2060390024f5c4a6ac,e72c62ec5027a710] 1 --- [ms-cards] [nio-9000-exec-6] c.d.ms_cards.controller.CardController   : fetchCardByMobileNumber end
+
+	Logs from ms-loans:
+
+		2025-12-15T15:52:06.219Z DEBUG [ms-loans,11dc00a419d03c2060390024f5c4a6ac,926c09bdc1f813ca] 1 --- [ms-loans] [io-8090-exec-10] c.d.ms_loans.controller.LoanController   : fetchLoanDetailByMobileNumber start
+
+		Hibernate: select l1_0.loan_id,l1_0.amound_paid,l1_0.created_at,l1_0.created_by,l1_0.loan_number,l1_0.loan_type,l1_0.mobile_number,l1_0.outstanding_amount,l1_0.total_loan_amount,l1_0.updated_at,l1_0.updated_by from loans l1_0 where l1_0.mobile_number=?
+
+		2025-12-15T15:52:06.242Z DEBUG [ms-loans,11dc00a419d03c2060390024f5c4a6ac,926c09bdc1f813ca] 1 --- [ms-loans] [io-8090-exec-10] c.d.ms_loans.controller.LoanController   : fetchLoanDetailByMobileNumber end
+
+Step 13: In Grafana, use Tempo as datasource and fetch information by searching against a Trace ID/Span ID
+
