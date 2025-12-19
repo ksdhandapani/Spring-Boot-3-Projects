@@ -1,0 +1,1854 @@
+Microservice Security
+
+Challenges
+----------
+
+Q: How are we going to secure our microservices from unauthorized access?
+
+How to secure our microservices and protect them from unauthorized access by client applications or end users? Right now, all our services do not have security, and anyone can invoke them to get a response that has sensitive data. 
+
+Q: How to enforce authentication and authorization inside our microservices?
+
+How can our microservices authenticate and authorize users and services to access them? Our microservices should be capable of performing identification, authentication & authorization.
+
+Authentication is the process of identifying the person or the application that is trying to invoke our microservices. 
+
+Authorization is the process by which we enforce privileged access, which means the person or the application that has enough permissions is only allowed to access our microservices.
+
+"Authentication is verifying who you are, while authorization is determining what you are allowed to do"
+
+Q: How to have a centralized identity and access management (IAM)?
+
+How to maintain a cerntralized component to store user credentials, handling identity & access management.
+
+Answer: Using OAuth2 / OpenID Connect, KeyCloak (IAM), and Spring Security, we can secure the microservices and handle all the above challenges.
+
+Drawbacks of Basic authentication
+---------------------------------
+
+In the early days, websites usually asked for credentials via an HTML form, which the browser would send to the server. The server authenticates the information and writes a session value in the cookie. As long as the session is still marked as active, the user can access protected features and resources.
+
+- Backend server or business logic is tightly coupled with the Authentication / Authorization logic.
+- Not mobile flow or REST API friendly.
+- Basic authentication flow does not accommodate well the use where users of one product or service would like to grant third-party clients access to their information on the platform.
+
+What is OAuth2, and what problems that OAuth2 solve
+---------------------------------------------------
+
+>>> OAuth2:
+
+OAuth 2.0 is an authorization framework that allows a third-party application to gain limited access to a user's data on another service, without the user having to share their password. 
+
+It is an industry-standard protocol for delegated access, commonly used for features like "Sign in with Google" or "Connect with Facebook", and it provides secure authorization flow for web, mobile, and desktop applications.
+
+Or
+
+OAuth stands for Open Authorization. It is a free and open-source protocol, built on IETF (Internet Engineering Task Force) standards and licenses from the Open Web Foundation. 
+
+OAuth 2.1 is a security standard where you give one application permission to access your data in another application.
+
+The steps to grant permission, or consent, are often referred to as authorization, or even delegated authorization.
+
+You authorize one application to access your data, or use features in another application on your behalf, without giving them your password.
+
+Problem:
+
+How come Google let me use the same account in all its products? Though they are all different websites or apps?
+
+Solution:
+
+Well, the answer is with the help of OAuth2.
+OAuth2 recommend using a separate auth server for Authentication and Authorization.
+
+>>> Advantages of OAuth2 standards
+
+Supports all kinds of Apps - OAuth2 supports multiple use cases addressing different device capabilities. It supports server-to-server apps, browser-based apps, mobile/native apps, IoT devices and consoles/TVs. It has various authorization grant flows like the Authentication Code grant, Client credentials Grant Type, etc, to support all kinds of app communication.
+
+Separation of Auth logic - Inside OAuth2, we have an Authorization server which receives requests from the Client for Access Tokens and issues them upon successful authentication. This enables us to maintain all the security logic in a single place. Regardless of how many applications an organization has, they all can connect to the Auth server to perform a login operation.
+
+All user credentials & client application credentials will be maintained in a single location, which is inside the Auth Server.
+
+No need to share Credentials - If you plan to allow third-party applications and services to access your resources, then there is no need to share your credentials.
+
+In many ways, you can think of the OAuth2 token as an "access card" at any office/hotel. These tokens provide limited access to someone without handing over full control in the form of the master key.
+
+>>> OAuth2 terminologies
+
+Resource Owner: 
+
+It is you, the end user. 
+In the scenario of StackOverflow, the end user wants to use the GitHub services to get their details. In other words, the end user owns the resources (email, profile), which is why we call him the Resource Owner.
+
+Client:
+
+The website, mobile app or API will be the client as it is the one that interacts with GitHub services on behalf of the resource owner or end user. In the scenario of StackOverflow, the StackOverflow website is the client.
+
+Authorization Server:
+
+This is the server that knows about the resource owner. In other words, the resource owner should have an account on this server. In the scenario of StackOverflow, the GitHub server, which has authorization logic, acts as an Authorization server.
+
+Resource Server:
+
+This is the server where the resources that the client wants to consume are hosted. In the scenario of StackOverflow, the resources like User Email, Profile details are hosted inside the GitHub server. So it will act as a resource server.
+
+Scopes: 
+
+These are granular permissions the client wants, such as access to data or to perform certain actions. The Auth server can issue an access token to a client with the scope of Email, READ, etc.
+
+The Auth Server can issue an access token to the client based on the scopes. These scopes decide what actions the client application can perform. 
+
+Inside the Stackoverflow scenario, GitHub might have issued a scope to the client application to read my email details and basic details. So whenever an access token is issued by the authorization server, it is going to construct the scopes. 
+
+So with this access token, my client application can interact with the resource server, and it can only perform the actions based on the privileges defined by the scope. 
+
+OpenID Connect
+--------------
+
+>>> Need for OpenID Connect
+
+OAuth2 was primarily designed for authorization, not authentication. While authentication verifies if a user is legitimate by validating credentials, authorization determines what actions the authenticated user can perform within the application.
+
+Though OAuth2 became widely adopted, many organizations began using it for authentication as well, which led to potential misuse. For example, when Stack Overflow uses GitHub credentials to authenticate users, GitHub only knows it's granting email access, unaware that Stack Overflow is also creating user accounts with that information.
+
+This overlap in functionality highlighted the necessity for OpenID Connect, which provides a robust solution for authentication on top of the OAuth2 framework.
+
+>>> What is OpenID Connect
+
+OpenID Connect is a protocol that sits on top of the OAuth 2.0 framework. While OAuth 2.0 provides authorization via an access token containing scopes, OpenID Connect provides authentication by introducing a new ID token, which contains a new set of information and claims specifically for identity.
+
+With the ID token, OpenID Connect brings standards around sharing identity details among applications.
+
+OpenID Connect - Authentication
+OAuth 2.0  - Authorization
+HTTP
+
+The OpenID Connect flow looks like the same as OAuth, but the only differences are that, in the initial request, a specific scope of OpenID is used, and in the final exchange, the client receives both an Access Token and an ID Token.
+
+>>> Why is OpenID Connect important?
+
+Identity is the key to any application. At the core of modern authorization is OAuth 2.0, but it lacks an authentication component. Implementing OpenID Connect on top of the OAuth 2.0 completes an IAM (Identity and Access Management) strategy.
+
+As more and more applications need to connect with each other and more identities are being populated on the internet, the demand to be able to share these identities has also increased. With OpenID Connect, applications can share identities easily and in a standard way.
+
+OpenID Connect add below details to OAuth 2.0:
+
+1. OIDC standardizes the scopes to openid, profile, email, and address.
+2. ID Token using JWT standard.
+3. OIDC exposes the standardized "/userinfo" endpoint.
+
+IAM Products and KeyCloak Overview
+----------------------------------
+
+KeyCloak (https://www.keycloak.org/) helps implement security in web applications using standards like OAuth 2 and OpenID Connect. However, simply knowing these standards isn’t enough to ensure security.
+
+>>> 'Client Credentials Grant Type' Flow in OAuth2
+
+The 'Client Credentials Grant Type' is used when two backend servers need to communicate securely without involving any end user or user interface. There are three main roles in this process:
+
+1. Client Server: This is another backend application or API that wants to access resources from our system.
+  
+2. Auth Server: This server authenticates the client and issues access tokens. We will use KeyCloak as our Auth Server.
+
+3. Resource Server: This acts as our gateway server, meaning it lets other applications communicate with our microservices. Before this happens, clients must obtain an access token from the Auth Server.
+
+>>> The Flow Explained
+
+1. Client Requests Token: The client server tells the Auth Server that it wants to access a protected resource. Since it needs an access token to proceed, it requests one and provides its Client ID and Client Secret for verification.
+
+Assume that the Client has already worked with the Auth Server and registered themselves as a valid client.
+
+The Client has to send the below important details to the Auth Server:
+
+	client_id and client_secret - The credentials of the Client to authenticate itself.
+	scope - Similar to authorities. Specific levels of access that the client is requesting, like EMAIL, PROFILE.
+	grant_type - With the value 'client_credentials', which indicates that we want to follow the client credentials grant type.
+
+2. Auth Server Issues Token: Once the Auth Server checks the client’s credentials and confirms they are valid, it sends back an access token.
+
+3. Client Uses Token: The client then takes this access token and sends it to the Resource Server when trying to access a specific resource.
+
+4. Resource Server Validates and Responds: The Resource Server checks the access token with the Auth Server to ensure it is valid and that the client has permission to access the requested resource. If everything checks out, the Resource Server sends back the information the client requested.
+
+This flow effectively manages secure access between backend systems.
+
+>>> Implementation: Securing Gateway using 'Client Credentials' Grant Type flow in OAuth2:
+
+Step 1: Set up Auth Server using KeyCloak
+
+https://www.keycloak.org/
+https://www.keycloak.org/guides
+https://www.keycloak.org/getting-started/getting-started-docker
+
+Running the following docker command in the terminal
+
+	docker run -p 127.0.0.1:8080:8080 -e KC_BOOTSTRAP_ADMIN_USERNAME=admin -e KC_BOOTSTRAP_ADMIN_PASSWORD=admin quay.io/keycloak/keycloak:26.4.7 start-dev
+
+	We are not going to expose the KeyCloak to the outside workd at the port 8080 because we are already doing that for ms-accounts service, so for this reason, we are going to change this port number to 8050.
+
+	docker run -d -p 127.0.0.1:8050:8080 -e KC_BOOTSTRAP_ADMIN_USERNAME=admin -e KC_BOOTSTRAP_ADMIN_PASSWORD=admin quay.io/keycloak/keycloak:26.4.7 start-dev
+
+Access the KeyCloak console at http://localhost:8050
+
+Inside any Auth Server like KeyCloak, realm is a boundary where you want to create a set of client credentials or user credentials, so think like this is an environment. As of now, we have onl one realm which is master.
+
+Step 3: Register Client details inside KeyCloak for 'Client Credentials Grant Flow' / Create a new Client:
+
+Step 3.1: Choose the Client Type as OpenID Connect
+Step 3.2: Give value for Client ID, e.g. xyzbank-callcenter-cc (cc indicates client credentials)
+Step 3.3: Give value for Name and Description, Name: XYZ Bank Call Center Application, XYZ Bank Call Center Application
+
+Click on Next
+
+Step 3.4: Enable 'Client authentication' toggle (We want our client to be authenticated itself with the auth server by providing its own credential. If we disable this, then any client can come and they can try to invoke our auth server)
+
+Step 3.5: In Authentication flow, disable 'Standard flow' and 'Direct access grants' because as of now, we are trying to leverage client credentials, grant type flow where two different applications that are grying to communicate with each other through REST APIs or through backend logic. So for the same, we need to make sure that we are selecting these 'Service account roles'. 
+
+Click on Next
+
+Step 3.6: Leave the 'Root URL' and 'Home URL' as empty and click on Save.
+
+Step 3.7: As soon as we click on the Save button, we can see a new client is created based upon the Client ID that we have created and this client is going to support OpenID Connect. 
+
+Now, coming to the credentials of this client, we have not given any credentials. the credentials are going to be auto generated by the KeyCloak to understand what are these credentials.
+
+Step 3.8: Click on 'Credentials' tab to see the created 'Client secret'
+
+Client ID: xyzbank-callcenter-cc
+Client Secret: k1XEIfi9IFOhBwiHSjwzFc6ZSqn5xYnq
+
+Step 4: Getting Access token from Auth Server in 'Client Credentials Grant Flow'
+
+Click on 'Realm settings'
+
+Scroll down to the end of the page and in the 'Endpoints' secion, cliek on 'OpenID Endpoint Configuration' - This will give us the list of endpoint URL supporte by our auth server.
+
+token_endpoint : "http://localhost:8070/realms/master/protocol/openid-connect/token" - token_endpoint is the URL that our client application has to invoke to get an access token
+
+Test it using Postman
+
+API Call:
+
+	curl --location 'http://localhost:8050/realms/master/protocol/openid-connect/token' \
+	--header 'Content-Type: application/x-www-form-urlencoded' \
+	--data-urlencode 'grant_type=client_credentials' \
+	--data-urlencode 'client_id=xyzbank-callcenter-cc' \
+	--data-urlencode 'client_secret=k1XEIfi9IFOhBwiHSjwzFc6ZSqn5xYnq' \
+	--data-urlencode 'scope=openid email profile'
+
+Response:
+
+	{
+	    "access_token": "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI5WFhaNElNenlKeWNtSFhrajllaE9XTmJYQ3p1bW9aQ1c3TFdFbXFuRS1nIn0.eyJleHAiOjE3NjU4ODc5NjUsImlhdCI6MTc2NTg4NzkwNSwianRpIjoidHJydGNjOjA4OTcyNzI5LTMxZDctNjUzOS0xZjY2LWQ3NjA4NDQzZjRjYiIsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6ODA1MC9yZWFsbXMvbWFzdGVyIiwiYXVkIjoiYWNjb3VudCIsInN1YiI6IjU5NTdiOWJiLTc5Y2EtNGMyZi1hNTg2LWUzMzcwMTFkY2NmZCIsInR5cCI6IkJlYXJlciIsImF6cCI6Inh5emJhbmstY2FsbGNlbnRlci1jYyIsImFjciI6IjEiLCJhbGxvd2VkLW9yaWdpbnMiOlsiLyoiXSwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbImRlZmF1bHQtcm9sZXMtbWFzdGVyIiwib2ZmbGluZV9hY2Nlc3MiLCJ1bWFfYXV0aG9yaXphdGlvbiJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFjY291bnQiOnsicm9sZXMiOlsibWFuYWdlLWFjY291bnQiLCJtYW5hZ2UtYWNjb3VudC1saW5rcyIsInZpZXctcHJvZmlsZSJdfX0sInNjb3BlIjoib3BlbmlkIGVtYWlsIHByb2ZpbGUiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsImNsaWVudEhvc3QiOiIxNzIuMTcuMC4xIiwicHJlZmVycmVkX3VzZXJuYW1lIjoic2VydmljZS1hY2NvdW50LXh5emJhbmstY2FsbGNlbnRlci1jYyIsImNsaWVudEFkZHJlc3MiOiIxNzIuMTcuMC4xIiwiY2xpZW50X2lkIjoieHl6YmFuay1jYWxsY2VudGVyLWNjIn0.jVCfoPec8jQL4WNnglxXAHECL1FeWRQrCWjQ_8l6z7bldpcWIGGMqPXfJzNyeT3FKC661-x88z8fBecPTTdMxgYwRX5Ho8239Zl2meuhZp4UUKlwFUURKnwvzSr9kT62I0QKDY_LW0YZK6pHf38UPHKavHfo2dzWWwYgzW6YTubLA_iDCHeuqaxbbTiQ3o7epe2lWdJSVma6SADQcsSVlTmUOK7Jn0ENxI1ezNYTXXQKuedu0OLHYf1ZrhQSKhLT7gRZcErpVRTc6sVtWJ-TcsSKr732jYkcsCAWltLqq4DvakQSprv_A5K4HrkgiXDdkwMcrSWXs9dXHrbtnYv-hg",
+	    "expires_in": 60,
+	    "refresh_expires_in": 0,
+	    "token_type": "Bearer",
+	    "id_token": "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI5WFhaNElNenlKeWNtSFhrajllaE9XTmJYQ3p1bW9aQ1c3TFdFbXFuRS1nIn0.eyJleHAiOjE3NjU4ODc5NjUsImlhdCI6MTc2NTg4NzkwNSwianRpIjoiNzAxYmQ1Y2EtMjZlOS04OWNhLTRkNWMtN2Q3OWZlNjc0YjZhIiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo4MDUwL3JlYWxtcy9tYXN0ZXIiLCJhdWQiOiJ4eXpiYW5rLWNhbGxjZW50ZXItY2MiLCJzdWIiOiI1OTU3YjliYi03OWNhLTRjMmYtYTU4Ni1lMzM3MDExZGNjZmQiLCJ0eXAiOiJJRCIsImF6cCI6Inh5emJhbmstY2FsbGNlbnRlci1jYyIsImF0X2hhc2giOiJzOWNkTk9xWmk1eTdxNXR4TVV4WVZBIiwiYWNyIjoiMSIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwiY2xpZW50SG9zdCI6IjE3Mi4xNy4wLjEiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJzZXJ2aWNlLWFjY291bnQteHl6YmFuay1jYWxsY2VudGVyLWNjIiwiY2xpZW50QWRkcmVzcyI6IjE3Mi4xNy4wLjEiLCJjbGllbnRfaWQiOiJ4eXpiYW5rLWNhbGxjZW50ZXItY2MifQ.n4CQsSGkkwOK4BpZNNXxjLs3mN_aPe1xxZ_c2YGTyAM-NrbHdSzMNId4m4sqywVflFxYJt2WIL7l5HyHMZiZR4E1QljkYJvXYrzi3CJAAkgxlr_2yQfJ6f4yYwXUKZJsXeD2KIl98s5EE_TlYh_-kwfV8i895y8l_2IpFZngiwOJaOciuiGUGuW_lpLpEHTHCclNDXn4LHEMqZdrCuR6FS8Ev3ZOQOoEGHnbqDKiSGnOmZLEArOU2cckIQxu6P6FjP_fPqeHLHSf8g8X6MZ6rnpONZdMK_-hTcNgYL1Zfff_x3jz-euPyyLjSO6gTAVJevLA9k5ERDf_xietTZ8Y6w",
+	    "not-before-policy": 0,
+	    "scope": "openid email profile"
+	}
+
+Copy the value of 'access_token' and see what is stored in this JSON Web Token using https://www.jwt.io/ (JWT Decoder)
+
+Step 5: Securing 'Gateway Server' as a Resource Server
+
+Step 5.1: Open pom.xml of ms-gateway-server and add the following dependencies
+
+		<depdendency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security</artifactId>
+		</depdendency>
+		<!-- To covert our Gateway server to OAuth2 resource server -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security-oauth2-resource-server</artifactId>
+        </dependency>
+		<!-- Since we are using JSON Web Token, we need to make sure we are adding this dependency -->
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-oauth2-jose</artifactId>
+		</dependency>
+
+Step 5.2: Create a new package named 'com.dhandapani.ms_gateway_server.config'
+
+Step 5.3: Create a new class named 'SecurityConfig' under 'com.dhandapani.ms_gateway_server.config'
+
+	package com.dhandapani.ms_gateway_server.config;
+
+	import org.springframework.context.annotation.Bean;
+	import org.springframework.context.annotation.Configuration;
+	import org.springframework.http.HttpMethod;
+	import org.springframework.security.config.Customizer;
+	import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
+	import org.springframework.security.config.web.server.ServerHttpSecurity;
+	import org.springframework.security.web.server.SecurityWebFilterChain;
+
+	/* Security Configuration class for the API Gateway */
+	@Configuration /* Marks this class as a configuration class for Spring */
+	/*
+	 * Spring Cloud Gateway uses the Spring Reactive Module, so we should use
+	 * the @EnableWebFluxSecurity annotation. For standard Spring Boot web
+	 * applications, @EnableWebSecurity is required.
+	 */
+	@EnableWebFluxSecurity
+	public class SecurityConfig {
+		
+		@Bean
+		public SecurityWebFilterChain springSecurityFilterchain(ServerHttpSecurity serverHttpSecurity) {
+			serverHttpSecurity
+				.authorizeExchange(exchanges -> exchanges
+						.pathMatchers(HttpMethod.GET).permitAll() /* Allow all GET requests without authentication */
+						.pathMatchers("/xyzbank/ms-accounts/**").authenticated() /* All other requests need to be authenticated */
+						.pathMatchers("/xyzbank/ms-cards/**").authenticated() /* All other requests need to be authenticated */
+						.pathMatchers("/xyzbank/ms-loans/**").authenticated() /* All other requests need to be authenticated */
+				)
+				.oauth2ResourceServer(oauth2ResourceServerSpec -> oauth2ResourceServerSpec
+					.jwt(Customizer.withDefaults()) /* With this we are telling Spring Security framework, please use the default configurations related to the JWT Tokens */
+				);
+			serverHttpSecurity.csrf(csrfSpec -> csrfSpec.disable()); /* Disable CSRF protection as we are using JWT tokens which are not vulnerable to CSRF attacks, CSRF is required when browser is involved */
+			return serverHttpSecurity.build();
+		}
+
+	}
+
+Step 5.4: Add the following properties to the application.properties of the ms-gateway-server
+
+As of now, our resource server (ms-gateway-server) does not have any clue about what the auth server is, what the endpoint URL of the auth server is, or what process it needs to follow to validate the access token. To provide all these details to the resource server, we need to make a configuration inside the application.properties
+
+	# With this path, we are telling our Gateway Server to validate the JWT tokens by using the public keys exposed by Keycloak server. The KeyCloak Server has Private Certificate or Key, using the private key only the KeyCloak issues the new toekens.
+	spring.security.oauth2.resourceserver.jwt.jwk-set-uri=http://localhost:8050/realms/master/protocol/openid-connect/certs
+
+Step 5.5: Test the security related changes we added to ms-gateway-server
+
+Start ms-config-server, ms-eurkeaserver, ms-accounts, ms-cards, ms-loans, and ms-gateway-server
+
+When you invoke any GET APIs of ms-accounts, ms-loans, and ms-cards, we should be able to get the response
+
+	curl --location 'http://localhost:8072/xyzbank/ms-accounts/api/accounts/contact-info'
+
+	{
+	    "contactDetails": {
+	        "name": "Dhandapani Sudhakar - PROD Lead",
+	        "email": "ksdhandapani96_prod@gmail.com"
+	    },
+	    "message": "Welcome to Accounts related PROD Test APIs",
+	    "onCallSupport": [
+	        "9876543210",
+	        "897654312"
+	    ]
+	}
+
+	curl --location 'http://localhost:8072/xyzbank/ms-cards/api/cards/contact-info'
+
+	{
+	    "contactDetails": {
+	        "name": "Dhandapani Sudhakar - PROD Lead",
+	        "email": "ksdhandapani96_prod@gmail.com"
+	    },
+	    "message": "Welcome to Cards related PROD APIs",
+	    "onCallSupport": [
+	        "9876543210",
+	        "897654312"
+	    ]
+	}
+
+	curl --location 'http://localhost:8072/xyzbank/ms-loans/api/loans/contact-info'
+
+	{
+	    "contactDetails": {
+	        "name": "Dhandapani Sudhakar - PROD Lead",
+	        "email": "ksdhandapani96_prod@gmail.com"
+	    },
+	    "message": "Welcome to Loans related PROD APIs",
+	    "onCallSupport": [
+	        "9876543210",
+	        "897654312"
+	    ]
+	}
+
+When we invoke any POST API without any security information, it will return '401' unauthorized error
+
+API Call:
+
+	curl --location 'http://localhost:8072/xyzbank/ms-accounts/api/accounts/create' \
+	--header 'Content-Type: application/json' \
+	--data-raw '{
+	    "name": "Dhandapani S",
+	    "email": "dhandapani.s@email.com",
+	    "mobileNumber": "4578905467"
+	}'
+
+Response: 
+
+	401
+	Unauthorized
+
+Step 5.6: Test our secured APIs by passing acess tokens
+
+Configure OAuth 2 in 'Authorization' section of Postman
+
+Choose the Type as 'OAuth 2.0'
+
+In the 'Configure New Token' section:
+
+Give a name for the 'Token Name' field, e.g. 'clientcredentials_accesstoken'
+For 'Grant Type', select 'Client Credentials'
+For 'Access Token URL', give - 'http://localhost:8050/realms/master/protocol/openid-connect/token' - The one that we use fetch token from KeyCloak
+For 'Client ID', give 'xyzbank-callcenter-cc' - The one that we created in KeyCloak
+For 'Client Secret', give 'k1XEIfi9IFOhBwiHSjwzFc6ZSqn5xYnq' - The one that we copied form KeyCloack
+For 'Client Authentication', select 'Send client credentials in body'
+If we scroll down, there will be a button named 'Get New Access Token' - Click on the button, so behind the scenes, it is going to send a request to the auth server and receive a new access token.
+Finally, click on 'Use Token' button so that the token can be used when we make the API Call.
+
+Calling Create Account API with authentication
+
+	curl --location 'http://localhost:8072/xyzbank/ms-accounts/api/accounts/create' \
+	--header 'Content-Type: application/json' \
+	--header 'Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI5WFhaNElNenlKeWNtSFhrajllaE9XTmJYQ3p1bW9aQ1c3TFdFbXFuRS1nIn0.eyJleHAiOjE3NjU4OTYzNDMsImlhdCI6MTc2NTg5NjI4MywianRpIjoidHJydGNjOmM3ZTk3ODJhLTEyNWEtZDU5ZS03Y2IxLTViNWY4ZGJiMWJlNiIsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6ODA1MC9yZWFsbXMvbWFzdGVyIiwiYXVkIjoiYWNjb3VudCIsInN1YiI6IjU5NTdiOWJiLTc5Y2EtNGMyZi1hNTg2LWUzMzcwMTFkY2NmZCIsInR5cCI6IkJlYXJlciIsImF6cCI6Inh5emJhbmstY2FsbGNlbnRlci1jYyIsImFjciI6IjEiLCJhbGxvd2VkLW9yaWdpbnMiOlsiLyoiXSwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbImRlZmF1bHQtcm9sZXMtbWFzdGVyIiwib2ZmbGluZV9hY2Nlc3MiLCJ1bWFfYXV0aG9yaXphdGlvbiJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFjY291bnQiOnsicm9sZXMiOlsibWFuYWdlLWFjY291bnQiLCJtYW5hZ2UtYWNjb3VudC1saW5rcyIsInZpZXctcHJvZmlsZSJdfX0sInNjb3BlIjoib3BlbmlkIGVtYWlsIHByb2ZpbGUiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsImNsaWVudEhvc3QiOiIxNzIuMTcuMC4xIiwicHJlZmVycmVkX3VzZXJuYW1lIjoic2VydmljZS1hY2NvdW50LXh5emJhbmstY2FsbGNlbnRlci1jYyIsImNsaWVudEFkZHJlc3MiOiIxNzIuMTcuMC4xIiwiY2xpZW50X2lkIjoieHl6YmFuay1jYWxsY2VudGVyLWNjIn0.hRCZ68iK_BLVDPkhtP44q5Pg-jXCbgYJE2FdtE6q8IbMDdi1oCwOqwM2s0isRH8sFUyskn_IsUbDSHw1tvCQWHwXJj3ZIiI2GKUmNp-tnDB4DbCaLJUfuosOe9UbMydxvv8Hz4ItM9BMCmyA8lrmERa6Rky6t_Pt2QXQtlqw7ORf8006fGIX7WfLmPjhTn1xQyyehDHA01dAW7HwBKjdqxDY5_gu4YTx7hdcJM4jQLhmU6my6chK2d8fp1AGt9isXYPl6xp1w6VLCKF4_tSabjR5OTDBpcz2TPeu95N2QXwd-5cDqMc8YCmFy11E9FxTtd32nwP736tW7lqFb7zQuQ' \
+	--data-raw '{
+	    "name": "Dhandapani S",
+	    "email": "dhandapani.s@email.com",
+	    "mobileNumber": "4578905467"
+	}'
+
+Response
+
+	{
+	    "statusCode": "201 CREATED",
+	    "statusMessage": "Account created successfully"
+	}
+
+Calling Create Card API with authentication
+
+	curl --location --request POST 'http://localhost:8072/xyzbank/ms-cards/api/cards/create?mobileNumber=4578905467' \
+	--header 'Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI5WFhaNElNenlKeWNtSFhrajllaE9XTmJYQ3p1bW9aQ1c3TFdFbXFuRS1nIn0.eyJleHAiOjE3NjU4OTY2MTUsImlhdCI6MTc2NTg5NjU1NSwianRpIjoidHJydGNjOmE1ZTlhM2U2LTAwY2YtY2RhYS1lMmMyLTcwY2QzMWE0MTJhOCIsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6ODA1MC9yZWFsbXMvbWFzdGVyIiwiYXVkIjoiYWNjb3VudCIsInN1YiI6IjU5NTdiOWJiLTc5Y2EtNGMyZi1hNTg2LWUzMzcwMTFkY2NmZCIsInR5cCI6IkJlYXJlciIsImF6cCI6Inh5emJhbmstY2FsbGNlbnRlci1jYyIsImFjciI6IjEiLCJhbGxvd2VkLW9yaWdpbnMiOlsiLyoiXSwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbImRlZmF1bHQtcm9sZXMtbWFzdGVyIiwib2ZmbGluZV9hY2Nlc3MiLCJ1bWFfYXV0aG9yaXphdGlvbiJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFjY291bnQiOnsicm9sZXMiOlsibWFuYWdlLWFjY291bnQiLCJtYW5hZ2UtYWNjb3VudC1saW5rcyIsInZpZXctcHJvZmlsZSJdfX0sInNjb3BlIjoib3BlbmlkIGVtYWlsIHByb2ZpbGUiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsImNsaWVudEhvc3QiOiIxNzIuMTcuMC4xIiwicHJlZmVycmVkX3VzZXJuYW1lIjoic2VydmljZS1hY2NvdW50LXh5emJhbmstY2FsbGNlbnRlci1jYyIsImNsaWVudEFkZHJlc3MiOiIxNzIuMTcuMC4xIiwiY2xpZW50X2lkIjoieHl6YmFuay1jYWxsY2VudGVyLWNjIn0.JYBDpqNAMuGzP99tnTLjCsR-_DMf4xwoRUUEkfrdny37EmNSpatVprizqR_Lo8NRwyGpMEVinsRpUm72qbEvFvteJkfqoF_nzMtw7GXN739o-iVIi--foipjPmNggBSe0skL950ZJwDBxtqCJpU4ZAZ_VXZyPuPs5zi67Rqb_m11Kns7U8nzpJ1oEpiaP8YnCQZd6gEL4QtJwJniH0L9BUL02kaI2WjW4weN9MR5XoZ6zY_BSEzYMxJ8QnLdDi5_78DInUB0thIOFPPUKW5340s7cL7DcxxY-klBKJgqVBgCoj9rcR0eKDAmchMmRBzfgZx42EzKs3m8yarNIgQZTg'
+
+Response
+
+	{
+	    "statusCode": "201 CREATED",
+	    "statusMessage": "Card created successfully"
+	}
+
+
+Calling Create Loan API with authentication
+
+	curl --location --request POST 'http://localhost:8072/xyzbank/ms-loans/api/loans/create?mobileNumber=4578905467' \
+	--header 'Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI5WFhaNElNenlKeWNtSFhrajllaE9XTmJYQ3p1bW9aQ1c3TFdFbXFuRS1nIn0.eyJleHAiOjE3NjU4OTY3ODAsImlhdCI6MTc2NTg5NjcyMCwianRpIjoidHJydGNjOmY3ZWU3M2EyLWFkMGItMjAzMy1jOGRhLTU3YjY0ZWRjMWZmMCIsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6ODA1MC9yZWFsbXMvbWFzdGVyIiwiYXVkIjoiYWNjb3VudCIsInN1YiI6IjU5NTdiOWJiLTc5Y2EtNGMyZi1hNTg2LWUzMzcwMTFkY2NmZCIsInR5cCI6IkJlYXJlciIsImF6cCI6Inh5emJhbmstY2FsbGNlbnRlci1jYyIsImFjciI6IjEiLCJhbGxvd2VkLW9yaWdpbnMiOlsiLyoiXSwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbImRlZmF1bHQtcm9sZXMtbWFzdGVyIiwib2ZmbGluZV9hY2Nlc3MiLCJ1bWFfYXV0aG9yaXphdGlvbiJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFjY291bnQiOnsicm9sZXMiOlsibWFuYWdlLWFjY291bnQiLCJtYW5hZ2UtYWNjb3VudC1saW5rcyIsInZpZXctcHJvZmlsZSJdfX0sInNjb3BlIjoib3BlbmlkIGVtYWlsIHByb2ZpbGUiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsImNsaWVudEhvc3QiOiIxNzIuMTcuMC4xIiwicHJlZmVycmVkX3VzZXJuYW1lIjoic2VydmljZS1hY2NvdW50LXh5emJhbmstY2FsbGNlbnRlci1jYyIsImNsaWVudEFkZHJlc3MiOiIxNzIuMTcuMC4xIiwiY2xpZW50X2lkIjoieHl6YmFuay1jYWxsY2VudGVyLWNjIn0.tBwae0InJEwAE5y4VtIrIg-kVXI26yuv1UsoN95itsOGn0zI5fBvYwg7J74WihiDIUwSbukh5a0GZD_AInj27hdtGUzfmCgFJQYCIJfUW-wKkUepLba0Mz0FGF1oyYIOZ3z3EFNgPKTGqnkBxQICKOxHRDPgQB32wwzGUskJm9O0USzfrvRovZU6CGJ0CZymldrQ_U_DB7hnqJvMsh58BSytHl0ThURmruEH_0m8_vZcc1fw9Fq14fOoF7OpsmyMaoiaxje17nhnOa4Aqjnr5ePia-4ZeNJ4YS4AYYru_zU37EYtGfz6_6PrUAQ1mnWix-9syU-xZf0nfgJeqSq5Vg'
+
+Response
+
+	{
+	    "statusCode": "201 CREATED",
+	    "statusMessage": "Loan created successfully"
+	}
+
+Calling Fetch Customer Details API - Without Auth (Because it is GET API)
+
+	curl --location 'http://localhost:8072/xyzbank/ms-accounts/api/customers/fetch?mobileNumber=4578905467'
+
+Response
+
+	{
+	    "accountDto": {
+	        "accountNumber": 1706393167,
+	        "accountType": "Savings",
+	        "branchAddress": "123 Main Street, New York"
+	    },
+	    "cardDto": {
+	        "mobileNumber": "4578905467",
+	        "cardNumber": "100861168490",
+	        "cardType": "Credit Card",
+	        "totalLimit": 100000,
+	        "amountUsed": 0,
+	        "availableAmount": 100000
+	    },
+	    "email": "dhandapani.s@email.com",
+	    "loanDto": {
+	        "mobileNumber": "4578905467",
+	        "loanNumber": "100673993942",
+	        "loanType": "Home Loan",
+	        "totalLoanAmount": 100000,
+	        "amountPaid": 0,
+	        "outstandingAmount": 100000
+	    },
+	    "mobileNumber": "4578905467",
+	    "name": "Dhandapani S"
+	}
+
+>>> Implement Authorization in the Gateway Server (ms-gateway-server) Using Roles
+
+Currently, our Gateway Server is only checking if the client application is authenticated. This means we are solely performing authentication without any authorization checks.
+
+But what if you have a requirement to process requests only if the client application has certain roles, authorities, or privileges?
+
+To address this, we will use the `hasRole` method to specify the necessary authorities or privileges.
+
+Step 1: Configure Roles for Our Client Application in Keycloak (Auth Server)
+
+In Keycloak, click on 'Clients' and select our client, 'xyzbank-callcenter-cc'.
+
+Since this client uses the 'client credentials' grant type flow, it operates as another application rather than an end user. Therefore, we should configure its roles under 'Service Account Roles' instead of 'Roles'.
+
+Step 2: Create a New Role in Realm Roles
+
+Navigate to 'Realm Roles' and click on 'Create Role'. Name the new role 'ACCOUNTS' and provide a description such as 'Accounts Role'.
+
+Step 3: Assign the New Role to the Client 'xyzbank-callcenter-cc'
+
+Go to 'Clients', then select 'xyzbank-callcenter-cc'. Under 'Service Account Roles', use the 'Assign Role' option to assign the newly created role (Realm roles) to the client.
+
+Step 4: Obtain a New Token and Verify Role Details
+
+After the assignment, get a new token and verify that it includes the role details.
+
+API Call:
+
+	curl --location 'http://localhost:8050/realms/master/protocol/openid-connect/token' \
+	--header 'Content-Type: application/x-www-form-urlencoded' \
+	--data-urlencode 'grant_type=client_credentials' \
+	--data-urlencode 'client_id=xyzbank-callcenter-cc' \
+	--data-urlencode 'client_secret=k1XEIfi9IFOhBwiHSjwzFc6ZSqn5xYnq' \
+	--data-urlencode 'scope=openid email profile'
+
+Response:
+
+	{
+	    "access_token": "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI5WFhaNElNenlKeWNtSFhrajllaE9XTmJYQ3p1bW9aQ1c3TFdFbXFuRS1nIn0.eyJleHAiOjE3NjU5NTcxMjUsImlhdCI6MTc2NTk1NzA2NSwianRpIjoidHJydGNjOjVlNGNiNzJiLTk5ZDAtZjYwYi0wY2Y5LTM2ZGQzYzg5OTFlOSIsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6ODA1MC9yZWFsbXMvbWFzdGVyIiwiYXVkIjoiYWNjb3VudCIsInN1YiI6IjU5NTdiOWJiLTc5Y2EtNGMyZi1hNTg2LWUzMzcwMTFkY2NmZCIsInR5cCI6IkJlYXJlciIsImF6cCI6Inh5emJhbmstY2FsbGNlbnRlci1jYyIsImFjciI6IjEiLCJhbGxvd2VkLW9yaWdpbnMiOlsiLyoiXSwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbImRlZmF1bHQtcm9sZXMtbWFzdGVyIiwiQUNDT1VOVFMiLCJvZmZsaW5lX2FjY2VzcyIsInVtYV9hdXRob3JpemF0aW9uIl19LCJyZXNvdXJjZV9hY2Nlc3MiOnsiYWNjb3VudCI6eyJyb2xlcyI6WyJtYW5hZ2UtYWNjb3VudCIsIm1hbmFnZS1hY2NvdW50LWxpbmtzIiwidmlldy1wcm9maWxlIl19fSwic2NvcGUiOiJvcGVuaWQgZW1haWwgcHJvZmlsZSIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwiY2xpZW50SG9zdCI6IjE3Mi4xNy4wLjEiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJzZXJ2aWNlLWFjY291bnQteHl6YmFuay1jYWxsY2VudGVyLWNjIiwiY2xpZW50QWRkcmVzcyI6IjE3Mi4xNy4wLjEiLCJjbGllbnRfaWQiOiJ4eXpiYW5rLWNhbGxjZW50ZXItY2MifQ.neAwwNOCgMKllN1hinSSOUpRTbU0xJkrkkpNv2iY-wujsy7O5ullpC3ls5MfOeoxqmf3lECX1Ri3YpVTGQ7N8VNyZ7oJc56TBvCsBsKE00tIm0t2ex-njcrLpgLikJScVUkLrG4LcyU1n_RwMJoWVgPpa50IELuqlU78vGwCi3M7lVXDy4FeKegSi3ZZzBFADh1nPVyRdUwuVHAsznjil7bCm1S47txNngTNAP3jCyucx_2Kop_30A4rzNAogk3eXw7eKiJrmJW31W8Mwv8fwwQ2WL3K97_KfsZF35NnUEVzOAupYi6lPX1FmEC9dSOL9u-nCEj6GEZPZN2i7UoCgw",
+	    "expires_in": 60,
+	    "refresh_expires_in": 0,
+	    "token_type": "Bearer",
+	    "id_token": "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI5WFhaNElNenlKeWNtSFhrajllaE9XTmJYQ3p1bW9aQ1c3TFdFbXFuRS1nIn0.eyJleHAiOjE3NjU5NTcxMjUsImlhdCI6MTc2NTk1NzA2NSwianRpIjoiNmRiNzM3MzctOWIzOC1hNGI0LTRmNjEtMGU3ZTBjZDg1OGQxIiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo4MDUwL3JlYWxtcy9tYXN0ZXIiLCJhdWQiOiJ4eXpiYW5rLWNhbGxjZW50ZXItY2MiLCJzdWIiOiI1OTU3YjliYi03OWNhLTRjMmYtYTU4Ni1lMzM3MDExZGNjZmQiLCJ0eXAiOiJJRCIsImF6cCI6Inh5emJhbmstY2FsbGNlbnRlci1jYyIsImF0X2hhc2giOiJ6bDhUU2E1ei1YNzdNQjR2Uk5DSlR3IiwiYWNyIjoiMSIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwiY2xpZW50SG9zdCI6IjE3Mi4xNy4wLjEiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJzZXJ2aWNlLWFjY291bnQteHl6YmFuay1jYWxsY2VudGVyLWNjIiwiY2xpZW50QWRkcmVzcyI6IjE3Mi4xNy4wLjEiLCJjbGllbnRfaWQiOiJ4eXpiYW5rLWNhbGxjZW50ZXItY2MifQ.Zh4cSL1QHoOfHop_6xdLDCAuAj_gU7XYdE3uFSBvrEEuG5Xlm5pqAVk_6Ol_s6qcr11Yb8Gy7BenISAQ1l7SvT-i_U7Sf_AofiI4nBMdoC1hkx0JI_I1qM94k-BA7D0Y0BsFG7LvGnSjDO_kym-IneiCNwAv1PkjGmgc4cxX1YkrvQ0fgCwDsVDyry5Roy_rjZ96Sv2853UC63kCm-XjS62LfnxZh25mZLvvDc6g5HIcmzX0RsytALRR1A444Bbir3D6zsTptHA4C5xGKJf_XoiSMAx78X_7byrUyOj0O_V8TS1sPRAaUOM_8XU0dY4c99Y2C2lMJs1JiLFe_y9fkQ",
+	    "not-before-policy": 0,
+	    "scope": "openid email profile"
+	}
+
+Decoded version of access_token:
+
+	{
+	  "exp": 1765957125,
+	  "iat": 1765957065,
+	  "jti": "trrtcc:5e4cb72b-99d0-f60b-0cf9-36dd3c8991e9",
+	  "iss": "http://localhost:8050/realms/master",
+	  "aud": "account",
+	  "sub": "5957b9bb-79ca-4c2f-a586-e337011dccfd",
+	  "typ": "Bearer",
+	  "azp": "xyzbank-callcenter-cc",
+	  "acr": "1",
+	  "allowed-origins": [
+	    "/*"
+	  ],
+	  "realm_access": {
+	    "roles": [
+	      "default-roles-master",
+	      "ACCOUNTS",
+	      "offline_access",
+	      "uma_authorization"
+	    ]
+	  },
+	  "resource_access": {
+	    "account": {
+	      "roles": [
+	        "manage-account",
+	        "manage-account-links",
+	        "view-profile"
+	      ]
+	    }
+	  },
+	  "scope": "openid email profile",
+	  "email_verified": false,
+	  "clientHost": "172.17.0.1",
+	  "preferred_username": "service-account-xyzbank-callcenter-cc",
+	  "clientAddress": "172.17.0.1",
+	  "client_id": "xyzbank-callcenter-cc"
+	}
+
+We have verified that the role information is coming inside the access token, but we should write a logic inside the resource server or gateway server (ms-gateway-server)  to extract this role information and convey the same to the Spring Security framework to use and validate the authorization rule that we have configured.
+
+Step 5: Configure the Spring Security Framework to Validate the Authorization Role
+
+Step 5.1: Create a class called `KeyCloakRoleConverter`. This class will help extract roles from KeyCloak and convert them into a format that the Spring Security framework can understand.
+
+Ensure that this class implements the `Converter` interface and provides an implementation for the `convert` method. This method will read the role information from the JWT Access Token and convert it into a collection of `GrantedAuthority`. The `GrantedAuthority` interface is part of the Spring Security framework.
+
+Step 5.2: Update SecurityConfig.java
+
+	package com.dhandapani.ms_gateway_server.config;
+
+	import org.springframework.context.annotation.Bean;
+	import org.springframework.context.annotation.Configuration;
+	import org.springframework.core.convert.converter.Converter;
+	import org.springframework.http.HttpMethod;
+	import org.springframework.security.authentication.AbstractAuthenticationToken;
+	import org.springframework.security.config.Customizer;
+	import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
+	import org.springframework.security.config.web.server.ServerHttpSecurity;
+	import org.springframework.security.oauth2.jwt.Jwt;
+	import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+	import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverterAdapter;
+	import org.springframework.security.web.server.SecurityWebFilterChain;
+
+	import reactor.core.publisher.Mono;
+
+	/* Security Configuration class for the API Gateway */
+	@Configuration /* Marks this class as a configuration class for Spring */
+	/*
+	 * Spring Cloud Gateway uses the Spring Reactive Module, so we should use
+	 * the @EnableWebFluxSecurity annotation. For standard Spring Boot web
+	 * applications, @EnableWebSecurity is required.
+	 */
+	@EnableWebFluxSecurity
+	public class SecurityConfig {
+		
+		@Bean
+		public SecurityWebFilterChain springSecurityFilterchain(ServerHttpSecurity serverHttpSecurity) {
+			serverHttpSecurity
+				.authorizeExchange(exchanges -> exchanges
+						.pathMatchers(HttpMethod.GET).permitAll() /* Allow all GET requests without authentication */
+						.pathMatchers("/xyzbank/ms-accounts/**").hasRole("ACCOUNTS")
+						.pathMatchers("/xyzbank/ms-cards/**").hasRole("CARDS")
+						.pathMatchers("/xyzbank/ms-loans/**").hasRole("LOANS")
+				)
+				.oauth2ResourceServer(oauth2ResourceServerSpec -> oauth2ResourceServerSpec
+					.jwt(jwtSpec -> jwtSpec.jwtAuthenticationConverter(grantedAuthoritiesExtractor())) /* With this we are telling Spring Security framework, please use the default configurations related to the JWT Tokens */
+				);
+			serverHttpSecurity.csrf(csrfSpec -> csrfSpec.disable()); /* Disable CSRF protection as we are using JWT tokens which are not vulnerable to CSRF attacks, CSRF is required when browser is involved */
+			return serverHttpSecurity.build();
+		}
+		
+		private Converter<Jwt, Mono<AbstractAuthenticationToken>> grantedAuthoritiesExtractor(){
+			JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
+			jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(new KeycloakRoleConverter());
+			return new ReactiveJwtAuthenticationConverterAdapter(jwtAuthenticationConverter);
+		}
+
+	}
+
+Step 6: Rebuild ms-gateway-server and verify the changes
+
+Get a new token, Keycloak with attach the roles information in the token
+
+Create an Account
+
+	API Call:
+
+		curl --location 'http://localhost:8072/xyzbank/ms-accounts/api/accounts/create' \
+		--header 'Content-Type: application/json' \
+		--header 'Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI5WFhaNElNenlKeWNtSFhrajllaE9XTmJYQ3p1bW9aQ1c3TFdFbXFuRS1nIn0.eyJleHAiOjE3NjYwMjQ3NTksImlhdCI6MTc2NjAyNDY5OSwianRpIjoidHJydGNjOjk3ZjQzOGNmLWRlZTYtMTlkNS1lYjNlLWJiYjMwMTRiYTVjMCIsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6ODA1MC9yZWFsbXMvbWFzdGVyIiwiYXVkIjoiYWNjb3VudCIsInN1YiI6IjU5NTdiOWJiLTc5Y2EtNGMyZi1hNTg2LWUzMzcwMTFkY2NmZCIsInR5cCI6IkJlYXJlciIsImF6cCI6Inh5emJhbmstY2FsbGNlbnRlci1jYyIsImFjciI6IjEiLCJhbGxvd2VkLW9yaWdpbnMiOlsiLyoiXSwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbImRlZmF1bHQtcm9sZXMtbWFzdGVyIiwiQUNDT1VOVFMiLCJvZmZsaW5lX2FjY2VzcyIsInVtYV9hdXRob3JpemF0aW9uIl19LCJyZXNvdXJjZV9hY2Nlc3MiOnsiYWNjb3VudCI6eyJyb2xlcyI6WyJtYW5hZ2UtYWNjb3VudCIsIm1hbmFnZS1hY2NvdW50LWxpbmtzIiwidmlldy1wcm9maWxlIl19fSwic2NvcGUiOiJvcGVuaWQgZW1haWwgcHJvZmlsZSIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwiY2xpZW50SG9zdCI6IjE3Mi4xNy4wLjEiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJzZXJ2aWNlLWFjY291bnQteHl6YmFuay1jYWxsY2VudGVyLWNjIiwiY2xpZW50QWRkcmVzcyI6IjE3Mi4xNy4wLjEiLCJjbGllbnRfaWQiOiJ4eXpiYW5rLWNhbGxjZW50ZXItY2MifQ.QPikcg6Q_kQ2r6nlx1_ugJgZslSOzur5sVehuT8SSQlsmHYxasacd7bN9Zh51Bl-0Bok_tsxWm6bUjBLkwTft0lFCclfDRhBei3Za20u08c5joKKLiawPycV2acUVmQVRGGxn--sC-e3PDnCXm3VhLwrcQbxaVhG0RSk1fu61Sw79CkhDSj-zPZOOtnAHCkQh17RCV44GbySLL4gXyDOkZMMYJ-VZX2_H5vOO-45t-iVl2PUEIwuSnL-TMUhlRaiI4fMx5nL2nz92NIeh5Gk1MvFOYwnht5KHJufyZdPJu7JxliX_nyU0UPZ2FZXMIZ6tpoGiRNTMLPim4ZajP4Kbg' \
+		--data-raw '{
+		    "name": "Dhandapani S",
+		    "email": "dhandapani.s@email.com",
+		    "mobileNumber": "4578905467"
+		}'
+
+	Response:
+
+		{
+		    "statusCode": "201 CREATED",
+		    "statusMessage": "Account created successfully"
+		}
+
+Create a Card 
+
+	Get a new token and use it
+
+	API Call:
+
+		curl --location --request POST 'http://localhost:8072/xyzbank/ms-cards/api/cards/create?mobileNumber=4578905467' \
+		--header 'Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI5WFhaNElNenlKeWNtSFhrajllaE9XTmJYQ3p1bW9aQ1c3TFdFbXFuRS1nIn0.eyJleHAiOjE3NjYwMjQ5NTAsImlhdCI6MTc2NjAyNDg5MCwianRpIjoidHJydGNjOmVhZjU4MDllLTk2OWEtZTY4Ny1mNjVhLTZjNjk5ZTBjNWJmZCIsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6ODA1MC9yZWFsbXMvbWFzdGVyIiwiYXVkIjoiYWNjb3VudCIsInN1YiI6IjU5NTdiOWJiLTc5Y2EtNGMyZi1hNTg2LWUzMzcwMTFkY2NmZCIsInR5cCI6IkJlYXJlciIsImF6cCI6Inh5emJhbmstY2FsbGNlbnRlci1jYyIsImFjciI6IjEiLCJhbGxvd2VkLW9yaWdpbnMiOlsiLyoiXSwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbImRlZmF1bHQtcm9sZXMtbWFzdGVyIiwiQUNDT1VOVFMiLCJvZmZsaW5lX2FjY2VzcyIsInVtYV9hdXRob3JpemF0aW9uIl19LCJyZXNvdXJjZV9hY2Nlc3MiOnsiYWNjb3VudCI6eyJyb2xlcyI6WyJtYW5hZ2UtYWNjb3VudCIsIm1hbmFnZS1hY2NvdW50LWxpbmtzIiwidmlldy1wcm9maWxlIl19fSwic2NvcGUiOiJvcGVuaWQgZW1haWwgcHJvZmlsZSIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwiY2xpZW50SG9zdCI6IjE3Mi4xNy4wLjEiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJzZXJ2aWNlLWFjY291bnQteHl6YmFuay1jYWxsY2VudGVyLWNjIiwiY2xpZW50QWRkcmVzcyI6IjE3Mi4xNy4wLjEiLCJjbGllbnRfaWQiOiJ4eXpiYW5rLWNhbGxjZW50ZXItY2MifQ.S724Ce4voqZ4xp6C7EmccnUZiVUQTCSpRRs-jZhUxqMyZK3Fwo2J1udWM6OfHJ6s5in_sSmk6UrNvHY5PcidP0QXUs8_BwUE88zdsOVfwHXUNJHmqImrS_6pR-M2ks6vyZdXCVQav5TMMcnrskZGbJx861w92bV_pSPsduvqH2-jJQXHi1XlZgMon8Zmw9zoghiAIfM5PiI5AibJ-5zzUb0y_NzYh52Yvb2XNIUV4TcTR9JxLOK6gKDD-W_BEuGb_Y2qTtKCx7IHvYyXoWZNm3tQ1Xz-78xhGZAoestdR_iPNrnmAFNEZZ28k93Md3BrcVxgNXAz23tunE4em2i6cQ'
+
+	Response: 403 Forbidden
+
+	Reason for 403 error code: We are authorized that is why we do not get 401 but still we get 403, the reason is that we are not authorized and we do not have the specific role 'ROLE_CARDS' which is required to access 'cards' endpoints which we have configured in the SecurityConfig.java file '.pathMatchers("/xyzbank/ms-cards/**").hasRole("CARDS")'
+
+	Fix: We need to create a realm role named 'CARDS' in Keycloak and assign it to the client 'xyzbank-callcenter-cc'
+
+Step 6.1: Create a realm role named 'CARDS' in Keycloak and assign it to the client 'xyzbank-callcenter-cc'
+
+Navigate to 'Realm Roles' and click on 'Create Role'. Name the new role 'CARDS' and provide a description such as 'Accounts Role'.
+
+Go to 'Clients', then select 'xyzbank-callcenter-cc'. Under 'Service Account Roles', use the 'Assign Role' option to assign the newly created role (Realm roles) to the client.
+
+
+Step 6.2: Create a Card and verify
+
+Create a Card 
+
+	Get a new token and use it (Roles information in the access token)
+
+		  "realm_access": {
+		    "roles": [
+		      "default-roles-master",
+		      "ACCOUNTS",
+		      "offline_access",
+		      "uma_authorization",
+		      "CARDS"
+		    ]
+		  }
+
+	API Call:
+
+		curl --location --request POST 'http://localhost:8072/xyzbank/ms-cards/api/cards/create?mobileNumber=4578905467' \
+		--header 'Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI5WFhaNElNenlKeWNtSFhrajllaE9XTmJYQ3p1bW9aQ1c3TFdFbXFuRS1nIn0.eyJleHAiOjE3NjYwMjU1ODYsImlhdCI6MTc2NjAyNTUyNiwianRpIjoidHJydGNjOmEzYzA0ZTJkLWFiOTItZjYwMi05MzMxLTZlNzMxZjM5NDcyYSIsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6ODA1MC9yZWFsbXMvbWFzdGVyIiwiYXVkIjoiYWNjb3VudCIsInN1YiI6IjU5NTdiOWJiLTc5Y2EtNGMyZi1hNTg2LWUzMzcwMTFkY2NmZCIsInR5cCI6IkJlYXJlciIsImF6cCI6Inh5emJhbmstY2FsbGNlbnRlci1jYyIsImFjciI6IjEiLCJhbGxvd2VkLW9yaWdpbnMiOlsiLyoiXSwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbImRlZmF1bHQtcm9sZXMtbWFzdGVyIiwiQUNDT1VOVFMiLCJvZmZsaW5lX2FjY2VzcyIsInVtYV9hdXRob3JpemF0aW9uIiwiQ0FSRFMiXX0sInJlc291cmNlX2FjY2VzcyI6eyJhY2NvdW50Ijp7InJvbGVzIjpbIm1hbmFnZS1hY2NvdW50IiwibWFuYWdlLWFjY291bnQtbGlua3MiLCJ2aWV3LXByb2ZpbGUiXX19LCJzY29wZSI6Im9wZW5pZCBlbWFpbCBwcm9maWxlIiwiZW1haWxfdmVyaWZpZWQiOmZhbHNlLCJjbGllbnRIb3N0IjoiMTcyLjE3LjAuMSIsInByZWZlcnJlZF91c2VybmFtZSI6InNlcnZpY2UtYWNjb3VudC14eXpiYW5rLWNhbGxjZW50ZXItY2MiLCJjbGllbnRBZGRyZXNzIjoiMTcyLjE3LjAuMSIsImNsaWVudF9pZCI6Inh5emJhbmstY2FsbGNlbnRlci1jYyJ9.SzqP-X5Qkqvw0VO87aDC1Nne_BDtQAOdYp1KbRx3AR-CY6tjsJSPre9t0UlFcF6U9SAjrYSzYHNah0NOMsscROpc9xD8TuhV4TIkOGb73uhM0-QobjFzradUpKNcuLLuF4Luvu0NZe_7Z6RagG3tXAeLW5y2kPWoTDQkgCaf7M5iNyUoZWmqYdeLhpl_J4duZ_E3bi7LBIrpda_PJH36hPvEziRPIeRidcEgfSo9hVay1-kCHsYJYZFFJCnrDb-7By2AEjX_MgeO4YaJ4td-mb_IH8NmWkEQO22Ipui71wUMTofA-MsmUr0gLG3281wcDe5eZg7GFSZEk-ZlxmquUA'
+
+	Response: 
+
+		{
+		    "statusCode": "201 CREATED",
+		    "statusMessage": "Card created successfully"
+		}
+
+Step 6.3: Create a realm role named 'LOANS' in Keycloak and assign it to the client 'xyzbank-callcenter-cc'
+
+Navigate to 'Realm Roles' and click on 'Create Role'. Name the new role 'LOANS' and provide a description such as 'Accounts Role'.
+
+Go to 'Clients', then select 'xyzbank-callcenter-cc'. Under 'Service Account Roles', use the 'Assign Role' option to assign the newly created role (Realm roles) to the client.
+
+Step 6.4: Create a Loan and verify
+
+Create a Loan 
+
+	Get a new token and use it (Roles information in the access token)
+
+		"realm_access": {
+		    "roles": [
+		      "LOANS",
+		      "default-roles-master",
+		      "ACCOUNTS",
+		      "offline_access",
+		      "uma_authorization",
+		      "CARDS"
+		    ]
+		  }
+
+	API Call:
+
+		curl --location --request POST 'http://localhost:8072/xyzbank/ms-loans/api/loans/create?mobileNumber=4578905467' \
+		--header 'Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI5WFhaNElNenlKeWNtSFhrajllaE9XTmJYQ3p1bW9aQ1c3TFdFbXFuRS1nIn0.eyJleHAiOjE3NjYwMjYwMjgsImlhdCI6MTc2NjAyNTk2OCwianRpIjoidHJydGNjOmI4OTRiYWMxLWZiNDUtZWJiYy05YzQ1LTRmNzViODhhMDQzMyIsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6ODA1MC9yZWFsbXMvbWFzdGVyIiwiYXVkIjoiYWNjb3VudCIsInN1YiI6IjU5NTdiOWJiLTc5Y2EtNGMyZi1hNTg2LWUzMzcwMTFkY2NmZCIsInR5cCI6IkJlYXJlciIsImF6cCI6Inh5emJhbmstY2FsbGNlbnRlci1jYyIsImFjciI6IjEiLCJhbGxvd2VkLW9yaWdpbnMiOlsiLyoiXSwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbIkxPQU5TIiwiZGVmYXVsdC1yb2xlcy1tYXN0ZXIiLCJBQ0NPVU5UUyIsIm9mZmxpbmVfYWNjZXNzIiwidW1hX2F1dGhvcml6YXRpb24iLCJDQVJEUyJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFjY291bnQiOnsicm9sZXMiOlsibWFuYWdlLWFjY291bnQiLCJtYW5hZ2UtYWNjb3VudC1saW5rcyIsInZpZXctcHJvZmlsZSJdfX0sInNjb3BlIjoib3BlbmlkIGVtYWlsIHByb2ZpbGUiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsImNsaWVudEhvc3QiOiIxNzIuMTcuMC4xIiwicHJlZmVycmVkX3VzZXJuYW1lIjoic2VydmljZS1hY2NvdW50LXh5emJhbmstY2FsbGNlbnRlci1jYyIsImNsaWVudEFkZHJlc3MiOiIxNzIuMTcuMC4xIiwiY2xpZW50X2lkIjoieHl6YmFuay1jYWxsY2VudGVyLWNjIn0.tNA4ZLE0gSB8maJ6e7QdYcKWJGH6HaZ8FX2juxnLNH6sNHP21qp7X_FfgqHYRd0i2ROLgsKmjWsW9elt3EyGX-svtwRUZKlpEPeOLDaZLvpn5ug_kalfBJfyGaMd4BdwxaUlx2dNGPNLWsIffhIqMs1LPg4Uxu6NxZX_SJGzaD4qsQE11nvUuZxVs3zHZVRb6xU0AxARhv4WrgQ_g3388erDd5vI35ANBrCS03iC5yQnr-ruTHkuGn2cVOoPq5iI4Wk-nYAw6lgbcCcFRhthw6BcasPKUvJ0k5gZkDX6rX23X5Zrg2tlByWu6Tc9Tmgm6wtDLOWQsb26j0jyAFwXYA'
+
+	Response:
+
+		{
+		    "statusCode": "201 CREATED",
+		    "statusMessage": "Loan created successfully"
+		}	
+
+>>> Authorization Code Grant Type Flow in OAuth2
+
+As of now, we have observed a scenario within our microservices where an external backend server or an external API is trying to communicate with our microservices using backend APIs, and there is no end user involved. In such scenarios, we need to use the 'Client Credentials Grant Type'.
+
+But what if the client application trying to consume our microservices is a web or mobile application? In such scenarios, there is a UI or mobile application, and there is an associated end user who is trying to use that website or mobile application. In these kinds of scenarios, we should use the 'Authorization Code Grant Type' flow, which is available in the OAuth2 Framework.
+
+Example: 
+
+Roles involved: End User, Client, Auth Server, Resource Server
+
+The client application, StackOverflow, is trying to fetch my details present on the GitHub Server by communicating with the Auth Server and Resource Server of GitHub.
+
+Flow:
+
+Step 1: User to Client App
+
+I want to access my resources
+
+Step 2: Client App to User
+
+Tell the Auth Server that you are fine to do this action
+
+Step 3: User to Auth Server
+
+Hello, Auth Server, please allow the client to access my resources. Here are the credentials to provide my identity.
+
+Step 4: Auth Server to Client App
+
+He Client, User allowed you to access their resources. Here is the AUTHORIZATION_CODE
+
+Step 5: Client App to Auth Server
+
+Here are my client credentials, AUTHORIZATION_CODE. Please provide me with an access token.
+
+Step 6: Auth Server to Client App
+
+Here is the access token from the Auth Server
+
+Step 7: Client App to Resource Server
+
+Hey, Resource Server, I want to access the user resources. Here is the access token from the Auth Server.
+
+Step 8: Resource Server to Client App
+
+Hey, Client, your token is validated successfully. Here are the resources you requested.
+
+In steps 2 & 3, where the client is making a request to the Auth Server endpoint have to send the below important details:
+
+- client_id: the ID that identifies the client application by the Auth Server. This will be granted when the client registers first time with the Auth Server.
+- redirect_uri: the URI value which the Auth Server needs to redirect post successful authentication. If a default value is provided during registration, then this value is optional.
+- scope: Similar to authorities. Specifies the level of access that the client is requesting, like READ.
+- state: CSRF token value to protect from CSRF attacks.
+- response_type: With the value 'code', which indicates that we want to follow authorization code grant type. 
+
+In step 5 where client after received the authorization code from the Auth Server, it will again make a request to the Auth Server for a token with the following values,
+
+- code: The authorization code received from the above steps.
+- client_id & client_secret: The client credentials which are registered with the auth server. Please note that these are not user credentials.
+- grant_type: With the value 'authorization_code', which identifies the kind of grant type used
+- redirect_uri
+
+In the Authorization Code Grant Type, the client makes two requests to the authorization server: one for an authorization code and another for an access token. Let’s break down these steps:
+
+1. First Step: The user directly interacts with the authorization server, providing their credentials. If the credentials are valid, the authorization server sends an authorization code to the client.
+
+2. Second Step: After receiving the authorization code, the client must prove its identity by presenting both the authorization code and its own credentials to obtain the access token.
+
+You might wonder why the authorization server doesn't combine these two steps and provide the access token in a single request. The reason lies in the existence of another grant type called the 'implicit grant type,' which has been deprecated due to security concerns. The separation of these steps enhances security by ensuring that the authorization process involves a direct interaction with the user and multiple validation checks.
+
+>>> Implementation - Authorization Code Grant Type Flow in OAuth2 - Theory
+
+Whenever an end user is involved and trying to communicate with Spring Cloud Gateway, we need to use the OAuth2 Authorization Code Grant Flow for Authentication and Authorization.
+
+Flow:
+
+Step 1: End User to Client (UI Web App or Mobile App)
+
+End user uses a website/app and tries to access a secure page, which invokes APIs hosted at the Gateway Server (ms-gateway-server)
+
+Step 2: Client (UI Web App or Mobile App) to Auth Server (Keycloak)
+
+Client app forwards the request to Keycloak, where the User enters their credentials on a login page. Post successful authentication, the access token will be received by the client.
+
+Step 3: Client (UI Web App or Mobile App) to Resource Server (Gateway or Edge Server)
+
+Client invokes a path in the edge server using an access token issued by the Auth Server
+
+Step 4: Resource Server (Gateway or Edge Server) to Auth Server (Keycloak)
+
+Edge Server validates the access token issued by the Auth Server
+
+Step 5: Resource Server (Gateway or Edge Server) to Microservices
+
+If the access token is valid, the edge server allows the request to the actual services.
+
+Microservices: Unsecured services deployed behind the Docker network or Kubernetes firewall network, so they cannot be accessed directly.
+
+>>> Implementation - Authorization Code Grant Type Flow in OAuth2
+
+Step 1: Register the client and end user inside Keycloak for Authorization Code Grant Flow
+
+Step 1.1: Navigate to KeyCloak -> Clients -> Create client 
+
+Leave Client type as 'OpenID Connect'
+For Client ID, give 'xyzbank-callcenter-ac', ac stands for authorization code
+For name, give 'XYZ Bank Callcenter UI App'
+For description, give 'XYZ Bank Callcenter UI App'
+Click on 'Next'
+Enable 'Client authentication'
+In the Authentication flow, select only 'Standard flow' and unselect the remaining items
+Click on 'Next'
+Ignore 'Root URL' and 'Home URL'
+For 'Valid redirect URIs', give '*', but in the actual scenario, we need to make sure we are giving a valid redirect URI.
+Ignore 'Valid post logout redirect URIs'
+For 'Web origins', give '*'. In the real world, your client application may be deployed in a different domain and a different port number, whereas the auth server or your microservices might be deployed in a different domain and port number. In such scenarios, the browser will stop the communication between them by throwing CORS CORS-related error. The CORS security feature in the browsers, by default, stops the communication between two different domains and port numbers until and unless the backend server allows it. So here we are, configuring inside our auth server, saying that please accept the request from cross domains as well. By configuring Asterisk here, we are find to receive the traffic from any kind of domain and port numbers.
+Finally, click on 'Save'
+
+We can copy the 'Client secret' from the 'Credentials' tab. 
+
+Client secret: NJGu95wRSOO1yywFzsvGyZJg2cDjaNms
+
+Step 1.2: Create end-user details in Keycloak 
+
+Click on the 'Users' tab
+Click on 'Create user'
+For Username, give any name, e.g. 'dhandapani'
+For Email, give any email address, e.g. ksdhandapani96@gmail.com
+Enable 'Email verified'
+For First Name, give a name, e.g. 'Dhandapani'
+For Last Name, give a name, e.g. 'Sudhakar'
+Click on Create
+
+Once the user is created, go to the 'Credentials' section and click on 'Set password'
+Give any value for the password, e.g. 12345
+Make sure you disable 'Temporary'
+Click on Save
+
+Step 1.3: Test the Authorization Code Grant Type workflow through Postman
+
+List of URLs supported by Keycloak - http://localhost:8050/realms/master/.well-known/openid-configuration
+
+Test Create Account API
+
+Select 'Authorization' tab
+Choose 'OAuth 2.0' as Auth Type
+For 'Token', select 'Available Tokens'
+For 'Header Prefix', give 'Bearer'
+
+In the 'Configure New Token' section
+
+For 'Token Name', give 'authcode_accesstoken'
+For 'Grant Type', choose 'Authorization Code'
+Enable 'Authorize using browser'
+For 'Auth URL', give 'http://localhost:8050/realms/master/protocol/openid-connect/auth' - This is the URL that our client application is going to redirect the end user. The user can enter their credentials and provide their consent, and post that, our client application is going to receive the authorization code.
+For 'Access Token URL', give 'http://localhost:8050/realms/master/protocol/openid-connect/token'
+For 'Client ID', give 'xyzbank-callcenter-ac'
+For 'Client Secret', give 'NJGu95wRSOO1yywFzsvGyZJg2cDjaNms'
+For 'Scope', give 'openid email profile'
+For 'State', give some random value like 'kfjsad-erekdh-ekairn'
+For 'Client Authentication', select 'Send client credentials in the body'
+Scroll down to the end and click on 'Get new Access Token' - Before clicking on this button, make sure you have closed all your browsers, and you are not logged into Keycloak already.
+It will redirect you to Keycloak to log in, you will have to enter the username 'dhandapani' and password '12345', the one that we configured previously as part of our previous steps i Keycloak.
+Once the authentication is completed, you will be redirected to Postman, and you will see a message like 'Authentication completed' in Postman. Click on 'Use Token' and hit the Create Account API.
+
+curl --location 'http://localhost:8072/xyzbank/ms-accounts/api/accounts/create' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI5WFhaNElNenlKeWNtSFhrajllaE9XTmJYQ3p1bW9aQ1c3TFdFbXFuRS1nIn0.eyJleHAiOjE3NjYwNzI0MjIsImlhdCI6MTc2NjA3MjM2MiwiYXV0aF90aW1lIjoxNzY2MDcyMjY3LCJqdGkiOiJvbnJ0cnQ6YWQzZDg5ZDctM2E0YS1mYWE5LTM1OWQtZDQ5OTFiNjc1YTRjIiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo4MDUwL3JlYWxtcy9tYXN0ZXIiLCJhdWQiOiJhY2NvdW50Iiwic3ViIjoiMTRlZjY1NzEtZDQzNS00ZGVlLWE2OWItYzBiNzBjY2NmMDI3IiwidHlwIjoiQmVhcmVyIiwiYXpwIjoieHl6YmFuay1jYWxsY2VudGVyLWFjIiwic2lkIjoiMTQ3N2Y2OTktYTFjZC01MTQyLTQ5NzktMDIxOTNkYTJkNzgwIiwiYWNyIjoiMSIsImFsbG93ZWQtb3JpZ2lucyI6WyIqIl0sInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJkZWZhdWx0LXJvbGVzLW1hc3RlciIsIm9mZmxpbmVfYWNjZXNzIiwidW1hX2F1dGhvcml6YXRpb24iXX0sInJlc291cmNlX2FjY2VzcyI6eyJhY2NvdW50Ijp7InJvbGVzIjpbIm1hbmFnZS1hY2NvdW50IiwibWFuYWdlLWFjY291bnQtbGlua3MiLCJ2aWV3LXByb2ZpbGUiXX19LCJzY29wZSI6Im9wZW5pZCBlbWFpbCBwcm9maWxlIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsIm5hbWUiOiJEaGFuZGFwYW5pIFN1ZGhha2FyIiwicHJlZmVycmVkX3VzZXJuYW1lIjoiZGhhbmRhcGFuaSIsImdpdmVuX25hbWUiOiJEaGFuZGFwYW5pIiwiZmFtaWx5X25hbWUiOiJTdWRoYWthciIsImVtYWlsIjoia3NkaGFuZGFwYW5pOTZAZ21haWwuY29tIn0.e0RzL7HakvU56iFn0O__t5JQ7Pre-pSKmqEjQS4sgGAk4ncWCFlIoQYFE4lzJBm7PesgAgt6HdslSk3PITTBal7109VvRSvw0zPtkvtJGUw1skbS1ZMYKJhaE7226fOEWVYXzP9gShk6WDD1VkRm6niW_Y400UjotAOYsjFTPBKXVJ-E6nRW2Xk2BY1CTozAvfRD8X50P_PZDZWpZ_s79jtP-54WOaqM2fGVcVjjSirIrD66Su4gwfbQlPEx1-UxmJQMg4b5KvAjvoVzcAXNZ9B5o6QTBnsCywSCQf0htpVv3qVZ6axKGx5GTjg1N4qzHzz4p2m_i85WBD3AUaIm3A' \
+--data-raw '{
+    "name": "Dhandapani S",
+    "email": "dhandapani.s@email.com",
+    "mobileNumber": "4578905468"
+}'
+
+Response: 403 Forbidden
+Reason for the error: We are getting a 403 Forbidden error because inside the resource service, we have configured a role ACCOUNTS, which means whoever tries to access the accounts endpoints, they should have the ACCOUNTS role assigned to them.
+
+Step 1.3.1: Assign ACCOUNTS, CARDS, and LOANS role to the end user 'dhandapani'
+
+Go to users and select 'dhandapani' and select 'Role mapping'
+
+Select the roles ACCOUNTS, CARDS, and LOANS and click on 'Assign'
+
+Now the user has the required roles.
+
+In Postman, click on 'Get New Access Token' and complete the authentication flow.
+
+Call the 'Create Account API' now
+
+Roles mentioned in the access token:
+
+	,
+	  "realm_access": {
+	    "roles": [
+	      "LOANS",
+	      "default-roles-master",
+	      "ACCOUNTS",
+	      "offline_access",
+	      "uma_authorization",
+	      "CARDS"
+	    ]
+	  }
+
+API Call:
+
+	curl --location 'http://localhost:8072/xyzbank/ms-accounts/api/accounts/create' \
+	--header 'Content-Type: application/json' \
+	--header 'Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI5WFhaNElNenlKeWNtSFhrajllaE9XTmJYQ3p1bW9aQ1c3TFdFbXFuRS1nIn0.eyJleHAiOjE3NjYwNzMxMTksImlhdCI6MTc2NjA3MzA1OSwiYXV0aF90aW1lIjoxNzY2MDczMDQ3LCJqdGkiOiJvbnJ0cnQ6NWVhMTUyYWUtNTBlYi1jYzBhLTE5OGItNjA0YzhlYTVmZGI3IiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo4MDUwL3JlYWxtcy9tYXN0ZXIiLCJhdWQiOiJhY2NvdW50Iiwic3ViIjoiMTRlZjY1NzEtZDQzNS00ZGVlLWE2OWItYzBiNzBjY2NmMDI3IiwidHlwIjoiQmVhcmVyIiwiYXpwIjoieHl6YmFuay1jYWxsY2VudGVyLWFjIiwic2lkIjoiOGY3NmEzZmUtMjdmNi02YjcyLWE3NjgtMGZlMDY1ZWQ5NTA3IiwiYWNyIjoiMSIsImFsbG93ZWQtb3JpZ2lucyI6WyIqIl0sInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJMT0FOUyIsImRlZmF1bHQtcm9sZXMtbWFzdGVyIiwiQUNDT1VOVFMiLCJvZmZsaW5lX2FjY2VzcyIsInVtYV9hdXRob3JpemF0aW9uIiwiQ0FSRFMiXX0sInJlc291cmNlX2FjY2VzcyI6eyJhY2NvdW50Ijp7InJvbGVzIjpbIm1hbmFnZS1hY2NvdW50IiwibWFuYWdlLWFjY291bnQtbGlua3MiLCJ2aWV3LXByb2ZpbGUiXX19LCJzY29wZSI6Im9wZW5pZCBlbWFpbCBwcm9maWxlIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsIm5hbWUiOiJEaGFuZGFwYW5pIFN1ZGhha2FyIiwicHJlZmVycmVkX3VzZXJuYW1lIjoiZGhhbmRhcGFuaSIsImdpdmVuX25hbWUiOiJEaGFuZGFwYW5pIiwiZmFtaWx5X25hbWUiOiJTdWRoYWthciIsImVtYWlsIjoia3NkaGFuZGFwYW5pOTZAZ21haWwuY29tIn0.wF-MJ_-rKH9dQ45bWFqVmyGlMXuvfH9cQkJpbUy0j3IqsNJaOnfV7SyQGj_mkB8R7ciXzhXD8Kgh-DyZbeycTUqOp0iCoA0gpEyRRklevoV6V3aoPx8sms3ZCt1TTAeL2vVMEpVfM8J4q_ePyr-joU1Z2CtT1z_Xp_GTVHy34LfcbRgbHKs0rJ6gcAKWBg6KQyRUUU2jIFNxW0uQjO95ELhOGI0dNM0xrFjS-S3XIfWqJkcfOdPjCL8xifT_WBXIPTIwKRreut79NELt_vXxraxlGo1m6U-87n4dNxZWkYd5zwcMSKQQhYJHA8v1PP0v80NZYRstMuQl91MiWeXyJQ' \
+	--data-raw '{
+	    "name": "Dhandapani S",
+	    "email": "dhandapani.s@email.com",
+	    "mobileNumber": "4578905468"
+	}'
+
+Response:
+
+	{
+	    "statusCode": "201 CREATED",
+	    "statusMessage": "Account created successfully"
+	}
+
+Call 'Create Card' API and verify the result
+
+API Call:
+
+	curl --location --request POST 'http://localhost:8072/xyzbank/ms-cards/api/cards/create?mobileNumber=4578905468' \
+	--header 'Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI5WFhaNElNenlKeWNtSFhrajllaE9XTmJYQ3p1bW9aQ1c3TFdFbXFuRS1nIn0.eyJleHAiOjE3NjYwNzM0MTAsImlhdCI6MTc2NjA3MzM1MCwiYXV0aF90aW1lIjoxNzY2MDczMDQ3LCJqdGkiOiJvbnJ0cnQ6ZTVmNDFkNzAtMzI5Ni00ZTVmLTk0NGItYTg3MDkyOWEyMzAwIiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo4MDUwL3JlYWxtcy9tYXN0ZXIiLCJhdWQiOiJhY2NvdW50Iiwic3ViIjoiMTRlZjY1NzEtZDQzNS00ZGVlLWE2OWItYzBiNzBjY2NmMDI3IiwidHlwIjoiQmVhcmVyIiwiYXpwIjoieHl6YmFuay1jYWxsY2VudGVyLWFjIiwic2lkIjoiOGY3NmEzZmUtMjdmNi02YjcyLWE3NjgtMGZlMDY1ZWQ5NTA3IiwiYWNyIjoiMCIsImFsbG93ZWQtb3JpZ2lucyI6WyIqIl0sInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJMT0FOUyIsImRlZmF1bHQtcm9sZXMtbWFzdGVyIiwiQUNDT1VOVFMiLCJvZmZsaW5lX2FjY2VzcyIsInVtYV9hdXRob3JpemF0aW9uIiwiQ0FSRFMiXX0sInJlc291cmNlX2FjY2VzcyI6eyJhY2NvdW50Ijp7InJvbGVzIjpbIm1hbmFnZS1hY2NvdW50IiwibWFuYWdlLWFjY291bnQtbGlua3MiLCJ2aWV3LXByb2ZpbGUiXX19LCJzY29wZSI6Im9wZW5pZCBlbWFpbCBwcm9maWxlIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsIm5hbWUiOiJEaGFuZGFwYW5pIFN1ZGhha2FyIiwicHJlZmVycmVkX3VzZXJuYW1lIjoiZGhhbmRhcGFuaSIsImdpdmVuX25hbWUiOiJEaGFuZGFwYW5pIiwiZmFtaWx5X25hbWUiOiJTdWRoYWthciIsImVtYWlsIjoia3NkaGFuZGFwYW5pOTZAZ21haWwuY29tIn0.QEOHPD7Zqe5SbNKq25n_ilHo9c4NoFYbaL5kkmHYRBrDGnVW4gWjt2KvCdhnEoIhPqIkdQmMc37kLlFA1G4Npcr9B8k1Ci4XSe3auwFmTwTi1tZNKmN1SndngcCjk3VYL6pN80csEs9IhG5wHETethYlOkU6ESnKxCIp5wm34j0TZZcQKM1xVQBUxtv3FBSbAaBDY6oVCAZNcccCTWqR4_M_MNiBaMNjyrR1yJ5-OAZglZ9zs1fpm2nmmuJGdSqZePFEGGHGZemvu4mvsKf7ZmwDuXsEFldCZkfd8pEy_NTzg1QvnX1tYArEeIT1wXxN09Gx_o4TqWyfeUq47WP5vw'
+
+Response:
+
+	{
+	    "statusCode": "201 CREATED",
+	    "statusMessage": "Card created successfully"
+	}
+
+Call 'Create Loan' API and verify the result
+
+API Call:
+
+	curl --location --request POST 'http://localhost:8072/xyzbank/ms-loans/api/loans/create?mobileNumber=4578905468' \
+	--header 'Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI5WFhaNElNenlKeWNtSFhrajllaE9XTmJYQ3p1bW9aQ1c3TFdFbXFuRS1nIn0.eyJleHAiOjE3NjYwNzM0NzcsImlhdCI6MTc2NjA3MzQxNywiYXV0aF90aW1lIjoxNzY2MDczMDQ3LCJqdGkiOiJvbnJ0cnQ6YzJjNTk0YmMtM2JmMy0wNGRiLTE0MGQtZDdmNzQ0YzVhMGE1IiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo4MDUwL3JlYWxtcy9tYXN0ZXIiLCJhdWQiOiJhY2NvdW50Iiwic3ViIjoiMTRlZjY1NzEtZDQzNS00ZGVlLWE2OWItYzBiNzBjY2NmMDI3IiwidHlwIjoiQmVhcmVyIiwiYXpwIjoieHl6YmFuay1jYWxsY2VudGVyLWFjIiwic2lkIjoiOGY3NmEzZmUtMjdmNi02YjcyLWE3NjgtMGZlMDY1ZWQ5NTA3IiwiYWNyIjoiMCIsImFsbG93ZWQtb3JpZ2lucyI6WyIqIl0sInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJMT0FOUyIsImRlZmF1bHQtcm9sZXMtbWFzdGVyIiwiQUNDT1VOVFMiLCJvZmZsaW5lX2FjY2VzcyIsInVtYV9hdXRob3JpemF0aW9uIiwiQ0FSRFMiXX0sInJlc291cmNlX2FjY2VzcyI6eyJhY2NvdW50Ijp7InJvbGVzIjpbIm1hbmFnZS1hY2NvdW50IiwibWFuYWdlLWFjY291bnQtbGlua3MiLCJ2aWV3LXByb2ZpbGUiXX19LCJzY29wZSI6Im9wZW5pZCBlbWFpbCBwcm9maWxlIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsIm5hbWUiOiJEaGFuZGFwYW5pIFN1ZGhha2FyIiwicHJlZmVycmVkX3VzZXJuYW1lIjoiZGhhbmRhcGFuaSIsImdpdmVuX25hbWUiOiJEaGFuZGFwYW5pIiwiZmFtaWx5X25hbWUiOiJTdWRoYWthciIsImVtYWlsIjoia3NkaGFuZGFwYW5pOTZAZ21haWwuY29tIn0.hUHTuKAleSaB9dunxOdMkNEHVuoswZJAncvemh125hoEbGPy4ffvy6anTsrPQAqgcDgqgquZrtfDcoCl78iNKCO2YFutQjCB_YNXQcw7teZ_W5-jTqXStRY6pyup8Ak1R87XNnum8_9x36X22WZb3c5tmmz39SoSAUF2B0PtmWMMyidQ5OpJvKTi5aa9kQLKQfEQ7vpjv-LBwvKiQR6aaMUn9Mus_IiNrifLJKlf4k-yLg_cXGvm8a4cCYJtS6y3fp3HDN77P7H8eAljgYBb8OihuW5-9nqww894KQz6gWmXF7RMpSQzucY3kTYfzx4g3-A3UoOvfpA7dKHJf2vRow'
+
+Response:
+
+	{
+	    "statusCode": "201 CREATED",
+	    "statusMessage": "Loan created successfully"
+	}
+
+>>> Updates to Docker Compose to support IAM Changes (Keycloak)
+
+Step 1: Regenerate the docker images with a new version 0.0.7
+
+PS D:\STS_WS\Microservices-Security\ms-cards> mvn compile jib:dockerBuild
+PS D:\STS_WS\Microservices-Security\ms-accounts> mvn compile jib:dockerBuild
+PS D:\STS_WS\Microservices-Security\ms-loans> mvn compile jib:dockerBuild
+PS D:\STS_WS\Microservices-Security\ms-config-server> mvn compile jib:dockerBuild
+PS D:\STS_WS\Microservices-Security\ms-eurekaserver> mvn compile jib:dockerBuild
+PS D:\STS_WS\Microservices-Security\ms-gateway-server> mvn compile jib:dockerBuild
+
+Step 2: Push Docker images from local to remote Docker Hub repository
+
+Syntax: docker images push docker.io/username/service:version
+
+ docker push docker.io/dhandapaniks/ms-accounts:0.0.7
+ docker push docker.io/dhandapaniks/ms-cards:0.0.7
+ docker push docker.io/dhandapaniks/ms-loans:0.0.7
+ docker push docker.io/dhandapaniks/ms-config-server:0.0.7
+ docker push docker.io/dhandapaniks/ms-eurekaserver:0.0.7
+ docker push docker.io/dhandapaniks/ms-gateway-server:0.0.7
+
+Now it is the time to test our security related changes with the help of Docker containers and Docker Compose.
+
+We are going to learn how to secure our internal microservices so that no one can access them directly and always the client applications has to go through edge server only. 
+
+Step 3: Change the image version to 0.0.7 for the images ms-accounts, ms-cards, ms-loans, ms-config-server, ms-eurekaserver, and ms-gateway-server in the docker-compose/prod/docker-compose.yml file
+
+Step 4: Add 'keycloak' service to docker-compose/prod/docker-compose.yml file
+
+	  keycloak:
+	    image: quay.io/keycloak/keycloak:26.4.7
+	    container_name: keycloak
+	    ports:
+	      - "127.0.0.1:8050:8080"
+	    environment:
+	      KC_BOOTSTRAP_ADMIN_USERNAME: "admin"
+	      KC_BOOTSTRAP_ADMIN_PASSWORD: "admin"
+	    command: "start-dev" # Use start-dev for development mode
+	    extends:
+	      file: common-config.yml
+	      service: network-deploy-service
+
+Step 5: Changes to ms-accounts service
+
+Previously we used to expose ms-accounts microservice to the outside world at the port 8080 but we are now going to remove the port mapping inside the docker compose file so ms-accounts service is not going to be exposed to the outside world, only the services which are deployed in the same Docker network should be able to communicate with the service name at the port 8080.
+
+The below section is removed from the docker-compose.yml file
+
+	    ports:
+	      - "8080:8080"
+
+We are going to apply the same changes to ms-cards (8090) and ms-loans (9000)
+
+Step 6: Add the following environment variable to ms-gateway-server
+
+	  ms-gateway-server:
+	    image: "dhandapaniks/ms-gateway-server:0.0.7"
+	    container_name: "ms-gateway-server"
+	    ports:
+	      - "8072:8072"
+	    depends_on:
+	      ms-accounts:
+	        condition: service_healthy
+	      ms-loans:
+	        condition: service_healthy
+	      ms-cards:
+	        condition: service_healthy
+	    environment:
+	      SPRING_APPLICATION_NAME: "ms-gateway-server"
+	      OTEL_SERVICE_NAME: "ms-gateway-server" # OpenTelemetry Service Name
+	      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK-SET-URI: "http://keycloak:8080/realms/master/protocol/openid-connect/certs" # With this path, we are telling our Gateway Server to validate the JWT tokens by using the public keys exposed by Keycloak server. The KeyCloak Server has Private Certificate or Key, using the private key only the KeyCloak issues the new toekens. The port inside the docker network.
+	    extends:
+	      file: common-config.yml
+	      service: microservice-eurekaserver-config
+
+Content of docker-compose/prod/docker-compose.yml
+
+		services:
+
+		  keycloak:
+		    image: quay.io/keycloak/keycloak:26.4.7
+		    container_name: keycloak
+		    ports:
+		      - "127.0.0.1:8050:8080"
+		    environment:
+		      KC_BOOTSTRAP_ADMIN_USERNAME: "admin"
+		      KC_BOOTSTRAP_ADMIN_PASSWORD: "admin"
+		    command: "start-dev" # Use start-dev for development mode
+		    extends:
+		      file: common-config.yml
+		      service: network-deploy-service
+		        
+		  read:
+		    image: grafana/loki:3.1.2
+		    command: "-config.file=/etc/loki/config.yaml -target=read"
+		    ports:
+		      - 3101:3100
+		      - 7946
+		      - 9095
+		    volumes:
+		      - ../observability/loki/loki-config.yaml:/etc/loki/config.yaml
+		    depends_on:
+		      - minio
+		    healthcheck:
+		      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1" ]
+		      interval: 10s
+		      timeout: 5s
+		      retries: 5
+		    networks: &loki-dns
+		      dhandapaniks-xyzbank-msntwrk:
+		        aliases:
+		          - loki
+
+		  write:
+		    image: grafana/loki:3.1.2
+		    command: "-config.file=/etc/loki/config.yaml -target=write"
+		    ports:
+		      - 3102:3100
+		      - 7946
+		      - 9095
+		    volumes:
+		      - ../observability/loki/loki-config.yaml:/etc/loki/config.yaml
+		    healthcheck:
+		      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1" ]
+		      interval: 10s
+		      timeout: 5s
+		      retries: 5
+		    depends_on:
+		      - minio
+		    networks:
+		      <<: *loki-dns
+
+		  alloy:
+		    image: grafana/alloy:v1.5.1
+		    volumes:
+		      - ../observability/alloy/alloy-local-config.yaml:/etc/alloy/config.alloy:ro
+		      - /var/run/docker.sock:/var/run/docker.sock
+		    command: run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
+		    ports:
+		      - 12345:12345
+		    depends_on:
+		      - gateway
+		    extends:
+		      file: common-config.yml
+		      service: network-deploy-service
+
+		  minio:
+		    image: minio/minio:RELEASE.2024-12-18T13-15-44Z
+		    entrypoint:
+		      - sh
+		      - -euc
+		      - |
+		        mkdir -p /data/loki-data && \
+		        mkdir -p /data/loki-ruler && \
+		        minio server /data
+		    environment:
+		      - MINIO_ROOT_USER=loki
+		      - MINIO_ROOT_PASSWORD=supersecret
+		      - MINIO_PROMETHEUS_AUTH_TYPE=public
+		      - MINIO_UPDATE=off
+		    ports:
+		      - 9000
+		    volumes:
+		      - ./.data/minio:/data
+		    healthcheck:
+		      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
+		      interval: 15s
+		      timeout: 20s
+		      retries: 5
+		    extends:
+		      file: common-config.yml
+		      service: network-deploy-service
+
+		  prometheus:
+		    image: prom/prometheus:v3.1.0
+		    container_name: prometheus
+		    ports:
+		     - "9090:9090"
+		    volumes:
+		     - ../observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+		    extends:
+		     file: common-config.yml
+		     service: network-deploy-service
+
+		  tempo:
+		    image: grafana/tempo:2.9.0
+		    container_name: tempo
+		    command: -config.file /etc/tempo-config.yml
+		    ports:
+		      - "3110:3100"
+		      - "4318:4318"
+		    volumes:
+		      - ../observability/tempo/tempo.yml:/etc/tempo-config.yml
+		    extends:
+		      file: common-config.yml
+		      service: network-deploy-service   
+
+		  grafana:
+		    image: grafana/grafana:11.4.0
+		    environment:
+		      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+		      - GF_AUTH_ANONYMOUS_ENABLED=true
+		      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+		    depends_on:
+		      - gateway
+		    entrypoint:
+		      - sh
+		      - -euc
+		      - |
+		        /run.sh
+		    ports:
+		     - "3000:3000"
+		    volumes:
+		     - ../observability/grafana/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
+		    healthcheck:
+		      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1" ]
+		      interval: 10s
+		      timeout: 5s
+		      retries: 5
+		    extends:
+		      file: common-config.yml
+		      service: network-deploy-service
+
+		  backend:
+		    image: grafana/loki:3.1.2
+		    volumes:
+		      - ../observability/loki/loki-config.yaml:/etc/loki/config.yaml
+		    ports:
+		      - "3100"
+		      - "7946"
+		    command: "-config.file=/etc/loki/config.yaml -target=backend -legacy-read-mode=false"
+		    depends_on:
+		      - gateway
+		    extends:
+		      file: common-config.yml
+		      service: network-deploy-service
+		    
+
+		  gateway:
+		    image: nginx:1.27.3
+		    depends_on:
+		      - read
+		      - write
+		    entrypoint:
+		      - sh
+		      - -euc
+		      - |
+		        cat <<EOF > /etc/nginx/nginx.conf
+		        user  nginx;
+		        worker_processes  5;  ## Default: 1
+
+		        events {
+		          worker_connections   1000;
+		        }
+
+		        http {
+		          resolver 127.0.0.11;
+
+		          server {
+		            listen             3100;
+
+		            location = / {
+		              return 200 'OK';
+		              auth_basic off;
+		            }
+
+		            location = /api/prom/push {
+		              proxy_pass       http://write:3100\$$request_uri;
+		            }
+
+		            location = /api/prom/tail {
+		              proxy_pass       http://read:3100\$$request_uri;
+		              proxy_set_header Upgrade \$$http_upgrade;
+		              proxy_set_header Connection "upgrade";
+		            }
+
+		            location ~ /api/prom/.* {
+		              proxy_pass       http://read:3100\$$request_uri;
+		            }
+
+		            location = /loki/api/v1/push {
+		              proxy_pass       http://write:3100\$$request_uri;
+		            }
+
+		            location = /loki/api/v1/tail {
+		              proxy_pass       http://read:3100\$$request_uri;
+		              proxy_set_header Upgrade \$$http_upgrade;
+		              proxy_set_header Connection "upgrade";
+		            }
+
+		            location ~ /loki/api/.* {
+		              proxy_pass       http://read:3100\$$request_uri;
+		            }
+		          }
+		        }
+		        EOF
+		        /docker-entrypoint.sh nginx -g "daemon off;"
+		    ports:
+		      - "3100:3100"
+		    healthcheck:
+		      test: ["CMD", "service", "nginx", "status"]
+		      interval: 10s
+		      timeout: 5s
+		      retries: 5
+		    extends:
+		      file: common-config.yml
+		      service: network-deploy-service
+
+		  ms-config-server:
+		    image: "dhandapaniks/ms-config-server:0.0.7"
+		    container_name: "ms-config-server"
+		    ports:
+		      - "8071:8071"
+		    healthcheck:
+		      test: "curl --fail --silent localhost:8071/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+		      interval: 10s
+		      timeout: 5s # In each check, it has to wait for 5 seconds
+		      retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+		      start_period: 10s # Execute health check command or api only after 10 seconds
+		    extends:
+		      file: common-config.yml
+		      service: microservice-base-config
+		    environment:
+		      SPRING_APPLICATION_NAME: "ms-config-server" # Spring Application Name
+		      OTEL_SERVICE_NAME: "ms-config-server" # OpenTelemetry Service Name
+
+		      
+		  ms-eurekaserver:
+		    image: "dhandapaniks/ms-eurekaserver:0.0.7"
+		    container_name: "ms-eurekaserver"
+		    ports:
+		      - "8070:8070"
+		    depends_on:
+		      ms-config-server:
+		        condition: service_healthy
+		    healthcheck:
+		      test: "curl --fail --silent localhost:8070/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+		      interval: 10s
+		      timeout: 5s # In each check, it has to wait for 5 seconds
+		      retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+		      start_period: 10s # Execute health check command or api only after 10 seconds
+		    extends:
+		      file: common-config.yml
+		      service: microservice-configserver-config
+		    environment:
+		      SPRING_APPLICATION_NAME: "ms-eurekaserver"
+		      OTEL_SERVICE_NAME: "ms-eurekaserver" # OpenTelemetry Service Name
+
+		  ms-accounts:
+		    image: "dhandapaniks/ms-accounts:0.0.7"
+		    container_name: "ms-accounts"
+		    depends_on:
+		      ms-config-server:
+		        condition: service_healthy
+		      ms-eurekaserver:
+		        condition: service_healthy
+		    healthcheck:
+		      test: "curl --fail --silent localhost:8080/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+		      interval: 10s
+		      timeout: 5s # In each check, it has to wait for 5 seconds
+		      retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+		      start_period: 10s # Execute health check command or api only after 10 seconds
+		    environment:
+		      SPRING_APPLICATION_NAME: "ms-accounts"
+		      OTEL_SERVICE_NAME: "ms-accounts" # OpenTelemetry Service Name
+		    extends:
+		      file: common-config.yml
+		      service: microservice-eurekaserver-config
+
+		  ms-loans:
+		    image: "dhandapaniks/ms-loans:0.0.7"
+		    container_name: "ms-loans"
+		    depends_on:
+		      ms-config-server:
+		        condition: service_healthy
+		      ms-eurekaserver:
+		        condition: service_healthy
+		    healthcheck:
+		      test: "curl --fail --silent localhost:8090/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+		      interval: 10s
+		      timeout: 5s # In each check, it has to wait for 5 seconds
+		      retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+		      start_period: 10s # Execute health check command or api only after 10 seconds
+		    environment:
+		      SPRING_APPLICATION_NAME: "ms-loans"
+		      OTEL_SERVICE_NAME: "ms-loans" # OpenTelemetry Service Name
+		    extends:
+		      file: common-config.yml
+		      service: microservice-eurekaserver-config
+
+		  ms-cards:
+		    image: "dhandapaniks/ms-cards:0.0.7"
+		    container_name: "ms-cards"
+		    depends_on:
+		      ms-config-server:
+		        condition: service_healthy
+		      ms-eurekaserver:
+		        condition: service_healthy
+		    healthcheck:
+		      test: "curl --fail --silent localhost:9000/actuator/health/readiness | grep UP || exit 1" # Using grep, we try to check for a value UP in the Health Check API response, it will exit if it is unable to find the value UP
+		      interval: 10s
+		      timeout: 5s # In each check, it has to wait for 5 seconds
+		      retries: 10 # If there is a failure in healthcheck, retry for 10 times within an interval of 10 seconds
+		      start_period: 10s # Execute health check command or api only after 10 seconds
+		    environment:
+		      SPRING_APPLICATION_NAME: "ms-cards"
+		      OTEL_SERVICE_NAME: "ms-cards" # OpenTelemetry Service Name
+		    extends:
+		      file: common-config.yml
+		      service: microservice-eurekaserver-config
+		      
+		  ms-gateway-server:
+		    image: "dhandapaniks/ms-gateway-server:0.0.7"
+		    container_name: "ms-gateway-server"
+		    ports:
+		      - "8072:8072"
+		    depends_on:
+		      ms-accounts:
+		        condition: service_healthy
+		      ms-loans:
+		        condition: service_healthy
+		      ms-cards:
+		        condition: service_healthy
+		    environment:
+		      SPRING_APPLICATION_NAME: "ms-gateway-server"
+		      OTEL_SERVICE_NAME: "ms-gateway-server" # OpenTelemetry Service Name
+		      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK-SET-URI: "http://keycloak:8080/realms/master/protocol/openid-connect/certs" # With this path, we are telling our Gateway Server to validate the JWT tokens by using the public keys exposed by Keycloak server. The KeyCloak Server has Private Certificate or Key, using the private key only the KeyCloak issues the new toekens. The port inside the docker network.
+		    extends:
+		      file: common-config.yml
+		      service: microservice-eurekaserver-config
+
+		networks:
+		  dhandapaniks-xyzbank-msntwrk:
+		    driver: "bridge"  
+
+Step 7: Make the same changes to 'default/docker-compose.yml' and 'qa/docker-compose.yml'
+
+step 8: Run 'docker compose up -d' to start the services from the prod profile
+
+		PS D:\STS_WS\Microservices-Security\docker-compose\prod> docker compose up -d
+		[+] Running 17/17
+		 ✔ Network prod_dhandapaniks-xyzbank-msntwrk  Created                                                                           0.0s
+		 ✔ Container tempo                            Started                                                                           1.3s
+		 ✔ Container prod-minio-1                     Started                                                                           1.2s
+		 ✔ Container ms-config-server                 Healthy                                                                          33.1s
+		 ✔ Container keycloak                         Started                                                                           1.1s
+		 ✔ Container prometheus                       Started                                                                           1.2s
+		 ✔ Container ms-eurekaserver                  Healthy                                                                          63.4s
+		 ✔ Container prod-read-1                      Started                                                                           1.6s
+		 ✔ Container prod-write-1                     Started                                                                           1.5s
+		 ✔ Container ms-cards                         Healthy                                                                         105.6s
+		 ✔ Container ms-accounts                      Healthy                                                                         115.1s
+		 ✔ Container ms-loans                         Healthy                                                                         105.6s
+		 ✔ Container prod-gateway-1                   Started                                                                           1.8s
+		 ✔ Container ms-gateway-server                Started                                                                         115.3s
+		 ✔ Container prod-backend-1                   Started                                                                           2.0s
+		 ✔ Container prod-grafana-1                   Started                                                                           2.1s
+		 ✔ Container prod-alloy-1                     Started                                                                           2.1s
+
+Step 9: Make calls to ms-cards, ms-accounts, and ms-loans services directly and verify the access
+
+	curl --location 'http://localhost:8080/api/accounts/contact-info'
+
+	Error:connect ECONNREFUSED 127.0.0.1:8080
+
+	curl --location 'http://localhost:8090/api/loans/contact-info'
+
+	Error:connect ECONNREFUSED 127.0.0.1:8090
+
+	curl --location 'http://localhost:9000/api/cards/contact-info'
+
+	Error:connect ECONNREFUSED 127.0.0.1:9000
+
+When we make direct calls to these APIs, we are getting 'ECONNREFUSED' error because we have removed the port mapping from the docker-compose.yml file. So anyone who wants to communicate with these micrsoervices, has to be present inside the Docker network.
+
+Step 10: Test the contact-info APIs using ms-gateway-server endpoints
+
+	Accounts contact-info
+
+		curl --location 'http://localhost:8072/xyzbank/ms-accounts/api/accounts/contact-info'
+
+		{
+		    "contactDetails": {
+		        "name": "Dhandapani Sudhakar - PROD Lead",
+		        "email": "ksdhandapani96_prod@gmail.com"
+		    },
+		    "message": "Welcome to Accounts related PROD Test APIs",
+		    "onCallSupport": [
+		        "9876543210",
+		        "897654312"
+		    ]
+		}
+
+	Cards contact-info
+
+		curl --location 'http://localhost:8072/xyzbank/ms-cards/api/cards/contact-info'
+
+		{
+		    "contactDetails": {
+		        "name": "Dhandapani Sudhakar - PROD Lead",
+		        "email": "ksdhandapani96_prod@gmail.com"
+		    },
+		    "message": "Welcome to Cards related PROD APIs",
+		    "onCallSupport": [
+		        "9876543210",
+		        "897654312"
+		    ]
+		}
+
+	Loans contact-info
+
+		curl --location 'http://localhost:8072/xyzbank/ms-loans/api/loans/contact-info'
+
+		{
+		    "contactDetails": {
+		        "name": "Dhandapani Sudhakar - PROD Lead",
+		        "email": "ksdhandapani96_prod@gmail.com"
+		    },
+		    "message": "Welcome to Loans related PROD APIs",
+		    "onCallSupport": [
+		        "9876543210",
+		        "897654312"
+		    ]
+		}
+
+So this confirms the 'Permit All' configuration that we have done inside the Resource Server are working fine.
+
+Step 11: Test Create Account API without Auth
+
+curl --location 'http://localhost:8072/xyzbank/ms-accounts/api/accounts/create' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "name": "Dhandapani S",
+    "email": "dhandapani.s@email.com",
+    "mobileNumber": "4578905467"
+}'
+
+401 Unauthorized
+
+Step 12: Register the Client in Keycloak server running via Docker
+
+Why we need to do this is because the new container is created and since we are using the internal database inside the dev environmnt, all our previously created client details will be lost whenever the container is deleted or whenever new container is created.
+
+But in the Production environment, the Keycloak is going to have a supporting databas where it can store all the client details and end user details.
+
+Step 12.1: Create a client and get the ID and Secret
+
+Access Keycloak at http://127.0.0.1:8050/ and use admin:admin as the credential
+
+After logging in, go to Client -> Create client -> Give name 'xyzbank-callcenter-cc'
+
+For Name and Description, give 'XYZ Bank Call Center App' and click on Next
+
+Enable 'Client authentication'
+
+In 'Authentication flow', select only 'Service account roles'
+
+Do not give any values for 'Root URL' and 'Home URL' and click on 'Save'
+
+Go to the 'Credentials' section and copy 'Client ID' and 'Cliect Secret'
+
+Client ID: xyzbank-callcenter-cc
+Client Secret: gRHinQIMnMq5p40wjCowoFidC9vmxCBW
+
+Step 12.2: Create ACCOUNTS, CARDS, and LOANS roles under Realm roles
+
+Click on 'Realm roles' and 'Create role'
+
+Create 3 roles named ACCOUNTS, CARDS, and LOANS
+
+Step 12.3: Assing the created roles to client 'xyzbank-callcenter-cc'
+
+Go to 'Clients', select 'xyzbank-callcenter-cc' and click on 'Service account roles' tab
+
+Now click on 'Assign role (Realm roles)'
+
+Select ACCOUNTS, CARDS, and LOANS and clieck on 'Assign'
+
+Now the roles have been assigned to the client 'xyzbank-callcenter-c'
+
+Step 12: Test Create Account API with Auth (Client Credentials Grant Type)
+
+Update the Client Secret in Postman and click on 'Get New Access Token' and finally click on 'Use Token'
+
+Step 13: Test the Create Account API with Auth (Client Credentials Grant Type)
+
+	curl --location 'http://localhost:8072/xyzbank/ms-accounts/api/accounts/create' \
+	--header 'Content-Type: application/json' \
+	--header 'Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJxclNBcWxDZWRfQWdzLXAzWUhrejR0OE9TYlpmWmc0UFQ3b0lLcUZnOWU0In0.eyJleHAiOjE3NjYxMzU0MTMsImlhdCI6MTc2NjEzNTM1MywianRpIjoidHJydGNjOjA4NGI4MTBhLTZiZDYtNjA4Yy04YjkwLWNjMGE2NGVlMWZkYyIsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6ODA1MC9yZWFsbXMvbWFzdGVyIiwiYXVkIjoiYWNjb3VudCIsInN1YiI6ImE5ZmU5YWEwLWU4M2ItNGY4OS1iMTFjLWFiZTEyNzc0YmU5NSIsInR5cCI6IkJlYXJlciIsImF6cCI6Inh5emJhbmstY2FsbGNlbnRlci1jYyIsImFjciI6IjEiLCJhbGxvd2VkLW9yaWdpbnMiOlsiLyoiXSwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbIkxPQU5TIiwiZGVmYXVsdC1yb2xlcy1tYXN0ZXIiLCJBQ0NPVU5UUyIsIm9mZmxpbmVfYWNjZXNzIiwidW1hX2F1dGhvcml6YXRpb24iLCJDQVJEUyJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFjY291bnQiOnsicm9sZXMiOlsibWFuYWdlLWFjY291bnQiLCJtYW5hZ2UtYWNjb3VudC1saW5rcyIsInZpZXctcHJvZmlsZSJdfX0sInNjb3BlIjoib3BlbmlkIHByb2ZpbGUgZW1haWwiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsImNsaWVudEhvc3QiOiIxNzIuMTguMC4xIiwicHJlZmVycmVkX3VzZXJuYW1lIjoic2VydmljZS1hY2NvdW50LXh5emJhbmstY2FsbGNlbnRlci1jYyIsImNsaWVudEFkZHJlc3MiOiIxNzIuMTguMC4xIiwiY2xpZW50X2lkIjoieHl6YmFuay1jYWxsY2VudGVyLWNjIn0.pZao00IeJbZcsRrFckx9EEzUThgvlF5NM_R5wLoNxar74GDCozoPgqBfxHMNxTR8eZ1jjoS2b_R40JNG4FX_85bVG-Oh8ykxJhurfRT_69bCGsLIODa4C6DoMiEpb_55nAOeAU_DuZFfxcIZVf76VrtC7yJp7oW9xTAQqeFVTcIQ4F7FC-0GrvSPefod3kEI4icbe7w2AUteFfOu1XrurKaYvfraVQuO9o-4iUpeTvxLTSZdqAe12_j6nBqcVrwmsU6j9ci6a6TQNpABN8SFa99KqxTNLpZFHGMHoYo1LJ4gb8wpEDAuY1imII5mlgYshv90yWY_CSFHPY_hLb8PGA' \
+	--data-raw '{
+	    "name": "Dhandapani S",
+	    "email": "dhandapani.s@email.com",
+	    "mobileNumber": "4578905467"
+	}'
+
+	{
+	    "statusCode": "201 CREATED",
+	    "statusMessage": "Account created successfully"
+	}
+
+Step 14: Test the Create Card API with Auth (Client Credentials Grant Type)
+
+Make sure you use the new Client ID and Secret and click on 'Get New Access Token' and 'Use Token' once authenticated
+
+	curl --location --request POST 'http://localhost:8072/xyzbank/ms-cards/api/cards/create?mobileNumber=4578905467' \
+	--header 'Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJxclNBcWxDZWRfQWdzLXAzWUhrejR0OE9TYlpmWmc0UFQ3b0lLcUZnOWU0In0.eyJleHAiOjE3NjYxMzU3MDksImlhdCI6MTc2NjEzNTY0OSwianRpIjoidHJydGNjOmJhN2VhNzBlLWVmMTYtNjM0Ni00NWQxLWVmODhlNjliMzMwMSIsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6ODA1MC9yZWFsbXMvbWFzdGVyIiwiYXVkIjoiYWNjb3VudCIsInN1YiI6ImE5ZmU5YWEwLWU4M2ItNGY4OS1iMTFjLWFiZTEyNzc0YmU5NSIsInR5cCI6IkJlYXJlciIsImF6cCI6Inh5emJhbmstY2FsbGNlbnRlci1jYyIsImFjciI6IjEiLCJhbGxvd2VkLW9yaWdpbnMiOlsiLyoiXSwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbIkxPQU5TIiwiZGVmYXVsdC1yb2xlcy1tYXN0ZXIiLCJBQ0NPVU5UUyIsIm9mZmxpbmVfYWNjZXNzIiwidW1hX2F1dGhvcml6YXRpb24iLCJDQVJEUyJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFjY291bnQiOnsicm9sZXMiOlsibWFuYWdlLWFjY291bnQiLCJtYW5hZ2UtYWNjb3VudC1saW5rcyIsInZpZXctcHJvZmlsZSJdfX0sInNjb3BlIjoib3BlbmlkIHByb2ZpbGUgZW1haWwiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsImNsaWVudEhvc3QiOiIxNzIuMTguMC4xIiwicHJlZmVycmVkX3VzZXJuYW1lIjoic2VydmljZS1hY2NvdW50LXh5emJhbmstY2FsbGNlbnRlci1jYyIsImNsaWVudEFkZHJlc3MiOiIxNzIuMTguMC4xIiwiY2xpZW50X2lkIjoieHl6YmFuay1jYWxsY2VudGVyLWNjIn0.SwGXZO9Leyx-E-J6MumOwmehAQd80f8zooJ8uGoTsEyf1m_iIfutxGRTWtpoof5NEWRohBk7vvownHUZDr_PpOGhnBQA9QYQF_WqTADyTb_8qqfYpJxtPzOu5HgG2f6hWEvXQnT9IEl-k-XC_NDPsB8PCg79b6tjqE19yzjfzYBMuYWdl_ApAhk4LoVOw-0Q4nfvQytjvuHZpft50PbW6Zp0c-5YXoNT0GWVNklYFRNbEfKOSMupNlOClZyMbvn6vOCrqD7nJnnCRJwKrd74Paff9h8Ab-IFgXVU-cqk2ebjL2vWeW3p0MkQCFIGeyRFCJ6ajTd-ORWRXu62ejBWrQ'
+
+	{
+	    "statusCode": "201 CREATED",
+	    "statusMessage": "Card created successfully"
+	}
+
+Step 15: Test the Create Loan API with Auth (Client Credentials Grant Type)
+
+Make sure you use the new Client ID and Secret and click on 'Get New Access Token' and 'Use Token' once authenticated
+ 
+	 curl --location --request POST 'http://localhost:8072/xyzbank/ms-loans/api/loans/create?mobileNumber=4578905467' \
+	--header 'Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJxclNBcWxDZWRfQWdzLXAzWUhrejR0OE9TYlpmWmc0UFQ3b0lLcUZnOWU0In0.eyJleHAiOjE3NjYxMzU4MTAsImlhdCI6MTc2NjEzNTc1MCwianRpIjoidHJydGNjOjRjZTEyZGY3LTQ2ZjMtM2Y5Zi0yMDQ4LTQ4ZDhjMTcxYmE4YSIsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6ODA1MC9yZWFsbXMvbWFzdGVyIiwiYXVkIjoiYWNjb3VudCIsInN1YiI6ImE5ZmU5YWEwLWU4M2ItNGY4OS1iMTFjLWFiZTEyNzc0YmU5NSIsInR5cCI6IkJlYXJlciIsImF6cCI6Inh5emJhbmstY2FsbGNlbnRlci1jYyIsImFjciI6IjEiLCJhbGxvd2VkLW9yaWdpbnMiOlsiLyoiXSwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbIkxPQU5TIiwiZGVmYXVsdC1yb2xlcy1tYXN0ZXIiLCJBQ0NPVU5UUyIsIm9mZmxpbmVfYWNjZXNzIiwidW1hX2F1dGhvcml6YXRpb24iLCJDQVJEUyJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFjY291bnQiOnsicm9sZXMiOlsibWFuYWdlLWFjY291bnQiLCJtYW5hZ2UtYWNjb3VudC1saW5rcyIsInZpZXctcHJvZmlsZSJdfX0sInNjb3BlIjoib3BlbmlkIHByb2ZpbGUgZW1haWwiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsImNsaWVudEhvc3QiOiIxNzIuMTguMC4xIiwicHJlZmVycmVkX3VzZXJuYW1lIjoic2VydmljZS1hY2NvdW50LXh5emJhbmstY2FsbGNlbnRlci1jYyIsImNsaWVudEFkZHJlc3MiOiIxNzIuMTguMC4xIiwiY2xpZW50X2lkIjoieHl6YmFuay1jYWxsY2VudGVyLWNjIn0.NtwVuC2YBECX3yDA4HcMi4zHprgErZBzG11RIzEeAfMHSGBYBngYhxqFfvbVtwxWNjwYNopIUXFKiM_jNJ19Y-TyMpMtbjoPYzui-pQhY_mC7V5m0q5jRWUuSrt0ExJ3b8XM68VWj3Hc7mldY2-oijf3KKpYzDQk5umUW5Ng7TSWhDGVHfa-vp1bbi_XnFdlsv8nNaC-gLZ3X3uh3cZeGonZ3chIKqZqp0bKW0RhgQE-LBIw_J1nY_zQm_xrgjwWrtv3TbiNLvRC4B5E1N0T2BBDsiGp_ptD2evS0qUKt8k-hukhH8dFTMFPi5k2B6jbLID3r1WPzNbePA6mbH57kQ'
+
+	{
+	    "statusCode": "201 CREATED",
+	    "statusMessage": "Loan created successfully"
+	}
+
+Step 16: Test Fetch Customer Details API (GET) which does not require any authentication
+
+	curl --location 'http://localhost:8072/xyzbank/ms-accounts/api/customers/fetch?mobileNumber=4578905467'
+
+	{
+	    "accountDto": {
+	        "accountNumber": 1485940231,
+	        "accountType": "Savings",
+	        "branchAddress": "123 Main Street, New York"
+	    },
+	    "cardDto": {
+	        "mobileNumber": "4578905467",
+	        "cardNumber": "100405847805",
+	        "cardType": "Credit Card",
+	        "totalLimit": 100000,
+	        "amountUsed": 0,
+	        "availableAmount": 100000
+	    },
+	    "email": "dhandapani.s@email.com",
+	    "loanDto": {
+	        "mobileNumber": "4578905467",
+	        "loanNumber": "100274925283",
+	        "loanType": "Home Loan",
+	        "totalLoanAmount": 100000,
+	        "amountPaid": 0,
+	        "outstandingAmount": 100000
+	    },
+	    "mobileNumber": "4578905467",
+	    "name": "Dhandapani S"
+	}
+
+Step 17: Configuration required for testing the APIs using 'Authorization Code Grant Type'
+
+Step 17.1: Create a client on Keycloak to test the Authorization Code Grant Type flow
+
+Access Keycloak at http://127.0.0.1:8050/ and use admin:admin as the credential
+Got to Client and Create client
+Give 'xyzbank-callcenter-ac' as Client ID
+For Name and Description, give 'XYZ Bank Call Center UI App'
+Click on Next
+Enable 'Client authentication'
+In 'Authentication flow', make sure only 'Standard flow' is enabled
+Click on Next
+For 'Valid redirect URIs' and 'Web origins', give Asterisk as value (*)
+Click on Save
+
+Once the client is created copy the Client ID and Secret from the Credentials tab
+
+Client ID: xyzbank-callcenter-ac
+Client Secret: 48bHsdvWH6Mq7InQtdIpvP0cUofxl510
+
+Step 17.2: Create end user in Keycloak and assign the roles
+
+Click on the 'Users' tab
+Click on 'Create user'
+For Username, give any name, e.g. 'dhandapani'
+For Email, give any email address, e.g. ksdhandapani96@gmail.com
+Enable 'Email verified'
+For First Name, give a name, e.g. 'Dhandapani'
+For Last Name, give a name, e.g. 'Sudhakar'
+Click on Create
+
+Once the user is created, go to the 'Credentials' section and click on 'Set password'
+Give any value for the password, e.g. 12345
+Make sure you disable 'Temporary'
+Click on Save
+
+Assign ACCOUNTS, CARDS, and LOANS role to the end user 'dhandapani'
+
+Go to users and select 'dhandapani' and select 'Role mapping'
+Select the roles ACCOUNTS, CARDS, and LOANS and click on 'Assign'
+Now the user has the required roles.
+
+Step 18: Test the Create Account API with Auth (Authorization Code Grant Type flow)
+
+Update the Client secret in Postman and click on 'Get New Access Token', it will redirect you to the Keycloak server and login using the username dhandapani and password 12345 and approve the access
+
+Once authenticated, click on Use Token and hit the API
+
+	  curl --location 'http://localhost:8072/xyzbank/ms-accounts/api/accounts/create' \
+	--header 'Content-Type: application/json' \
+	--header 'Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJxclNBcWxDZWRfQWdzLXAzWUhrejR0OE9TYlpmWmc0UFQ3b0lLcUZnOWU0In0.eyJleHAiOjE3NjYxMzc1MzAsImlhdCI6MTc2NjEzNzQ3MCwiYXV0aF90aW1lIjoxNzY2MTM3NDA3LCJqdGkiOiJvbnJ0cnQ6YTlmYjExZmItNjNhYi0zYTZjLTg4Y2UtNDg3YzIwNzNjOTczIiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo4MDUwL3JlYWxtcy9tYXN0ZXIiLCJhdWQiOiJhY2NvdW50Iiwic3ViIjoiYTlmNGZhZGEtZjg0OS00ZmEzLWIzMTYtMDRmNmM2OWQwZGI3IiwidHlwIjoiQmVhcmVyIiwiYXpwIjoieHl6YmFuay1jYWxsY2VudGVyLWFjIiwic2lkIjoiYzFmYzVjZDYtZDRkYy0xYmI4LWNkMjItN2EwOGI3NzZhNTE1IiwiYWNyIjoiMSIsImFsbG93ZWQtb3JpZ2lucyI6WyIqIl0sInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJMT0FOUyIsImRlZmF1bHQtcm9sZXMtbWFzdGVyIiwiQUNDT1VOVFMiLCJvZmZsaW5lX2FjY2VzcyIsInVtYV9hdXRob3JpemF0aW9uIiwiQ0FSRFMiXX0sInJlc291cmNlX2FjY2VzcyI6eyJhY2NvdW50Ijp7InJvbGVzIjpbIm1hbmFnZS1hY2NvdW50IiwibWFuYWdlLWFjY291bnQtbGlua3MiLCJ2aWV3LXByb2ZpbGUiXX19LCJzY29wZSI6Im9wZW5pZCBwcm9maWxlIGVtYWlsIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsIm5hbWUiOiJEaGFuZGFwYW5pIFN1ZGhha2FyIiwicHJlZmVycmVkX3VzZXJuYW1lIjoiZGhhbmRhcGFuaSIsImdpdmVuX25hbWUiOiJEaGFuZGFwYW5pIiwiZmFtaWx5X25hbWUiOiJTdWRoYWthciIsImVtYWlsIjoia3NkaGFuZGFwYW5pOTZAZ21haWwuY29tIn0.YYo3VuTpCzjkAU3A8qcByuEJYu1Tt_fY4wHISNszdwFFfJhOL3U_tnRMe1IGKKzZrqAABzmhmM4ZMRZ3pzpNjFgusSHGPyDQ7a4R69qnvRbYWw2heP4N8UJuiJcfaCCDLrC1i-0jEFgJsUBZ3Yei4BkKShw5X7_yW3DbuAXiddFjNa5lK_YKjMpmaWiv_lBx65DJp6Lxhqc6hHy2sEZqX62S2dYOoqmN6hvcRgLyN9ACYMketHbAAqmzxbSxkbToy1wmXgVEGOmbZnloObNV8rXHaXSxHx3FP2_s7CyzXGKw0FUxxcTXJbtbKfzJLh2XwnQBgDfDK62dlhTwcBXBog' \
+	--data-raw '{
+	    "name": "Dhandapani S",
+	    "email": "dhandapani.s@email.com",
+	    "mobileNumber": "4578905468"
+	}'
+
+	{
+	    "statusCode": "201 CREATED",
+	    "statusMessage": "Account created successfully"
+	}
+
+Step 19: Test the Create Card API with Auth (Authorization Code Grant Type flow)
+
+	curl --location --request POST 'http://localhost:8072/xyzbank/ms-cards/api/cards/create?mobileNumber=4578905468' \
+	--header 'Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJxclNBcWxDZWRfQWdzLXAzWUhrejR0OE9TYlpmWmc0UFQ3b0lLcUZnOWU0In0.eyJleHAiOjE3NjYxMzc3NjYsImlhdCI6MTc2NjEzNzcwNiwiYXV0aF90aW1lIjoxNzY2MTM3NjIzLCJqdGkiOiJvbnJ0cnQ6YjUyYTZhNjYtYTJlOC1mMjNmLTQ5NDctOWE0YThjNTE1ZGE3IiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo4MDUwL3JlYWxtcy9tYXN0ZXIiLCJhdWQiOiJhY2NvdW50Iiwic3ViIjoiYTlmNGZhZGEtZjg0OS00ZmEzLWIzMTYtMDRmNmM2OWQwZGI3IiwidHlwIjoiQmVhcmVyIiwiYXpwIjoieHl6YmFuay1jYWxsY2VudGVyLWFjIiwic2lkIjoiZTlkMjA1OTAtMmFkZC0wMmQ0LTZiOGItMjg0NGUyMmQ4NzA5IiwiYWNyIjoiMCIsImFsbG93ZWQtb3JpZ2lucyI6WyIqIl0sInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJMT0FOUyIsImRlZmF1bHQtcm9sZXMtbWFzdGVyIiwiQUNDT1VOVFMiLCJvZmZsaW5lX2FjY2VzcyIsInVtYV9hdXRob3JpemF0aW9uIiwiQ0FSRFMiXX0sInJlc291cmNlX2FjY2VzcyI6eyJhY2NvdW50Ijp7InJvbGVzIjpbIm1hbmFnZS1hY2NvdW50IiwibWFuYWdlLWFjY291bnQtbGlua3MiLCJ2aWV3LXByb2ZpbGUiXX19LCJzY29wZSI6Im9wZW5pZCBwcm9maWxlIGVtYWlsIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsIm5hbWUiOiJEaGFuZGFwYW5pIFN1ZGhha2FyIiwicHJlZmVycmVkX3VzZXJuYW1lIjoiZGhhbmRhcGFuaSIsImdpdmVuX25hbWUiOiJEaGFuZGFwYW5pIiwiZmFtaWx5X25hbWUiOiJTdWRoYWthciIsImVtYWlsIjoia3NkaGFuZGFwYW5pOTZAZ21haWwuY29tIn0.O377DMYJEajrkE6KuRhk4ntiww9MpC7xj9kW3QVwPlQ6qYx2ZDT7eGXQCvd2RIZtxOwXsX4KjO6wrsQQDkZrTZljKs-FVXI5_QgkNBHOxFjOgYbqW5tU2DA4EQL4Hv6gIh6jDDPdlDzLPt4y9S_exu6XXnSWAk8ZBKZ_yQKW4qxgHnrWzTCVzylXMSvCmCaOoGk9HbJuJFyDwOIOgQ9Zt64Iyg-3FyuaWWISLWMUMra3pg7ugr1PC9Iu74MnJkYqBO6WGUwPxpljg6BFWjBvGIYmB-9qd8h_oQyk_3lwx2QmvBm3lYkInxAY1rnnOZFsGbp9UzE_XgsD6dhy726D_Q'
+
+	{
+	    "statusCode": "201 CREATED",
+	    "statusMessage": "Card created successfully"
+	}
+
+Step 20: Test the Create Loan API with Auth (Authorization Code Grant Type flow)
+
+	curl --location --request POST 'http://localhost:8072/xyzbank/ms-loans/api/loans/create?mobileNumber=4578905468' \
+	--header 'Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJxclNBcWxDZWRfQWdzLXAzWUhrejR0OE9TYlpmWmc0UFQ3b0lLcUZnOWU0In0.eyJleHAiOjE3NjYxMzc4NDAsImlhdCI6MTc2NjEzNzc4MCwiYXV0aF90aW1lIjoxNzY2MTM3NjIzLCJqdGkiOiJvbnJ0cnQ6OTdmMTVhNjItMmQ3ZC0wMTk5LTVjMzYtMzIyNzAzNzk1ZTliIiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo4MDUwL3JlYWxtcy9tYXN0ZXIiLCJhdWQiOiJhY2NvdW50Iiwic3ViIjoiYTlmNGZhZGEtZjg0OS00ZmEzLWIzMTYtMDRmNmM2OWQwZGI3IiwidHlwIjoiQmVhcmVyIiwiYXpwIjoieHl6YmFuay1jYWxsY2VudGVyLWFjIiwic2lkIjoiZTlkMjA1OTAtMmFkZC0wMmQ0LTZiOGItMjg0NGUyMmQ4NzA5IiwiYWNyIjoiMCIsImFsbG93ZWQtb3JpZ2lucyI6WyIqIl0sInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJMT0FOUyIsImRlZmF1bHQtcm9sZXMtbWFzdGVyIiwiQUNDT1VOVFMiLCJvZmZsaW5lX2FjY2VzcyIsInVtYV9hdXRob3JpemF0aW9uIiwiQ0FSRFMiXX0sInJlc291cmNlX2FjY2VzcyI6eyJhY2NvdW50Ijp7InJvbGVzIjpbIm1hbmFnZS1hY2NvdW50IiwibWFuYWdlLWFjY291bnQtbGlua3MiLCJ2aWV3LXByb2ZpbGUiXX19LCJzY29wZSI6Im9wZW5pZCBwcm9maWxlIGVtYWlsIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsIm5hbWUiOiJEaGFuZGFwYW5pIFN1ZGhha2FyIiwicHJlZmVycmVkX3VzZXJuYW1lIjoiZGhhbmRhcGFuaSIsImdpdmVuX25hbWUiOiJEaGFuZGFwYW5pIiwiZmFtaWx5X25hbWUiOiJTdWRoYWthciIsImVtYWlsIjoia3NkaGFuZGFwYW5pOTZAZ21haWwuY29tIn0.IB4YsONgxkCu35nbKofmww-foAojJEk5jiU3nfEMYaqomugCIg62Hl7au_hyNmwiiiiDFEh2c3XxuiwqCQiqjDsKPPTFKMCg9Lj9QLnxe0wDyS79jWu1hyu_iH8b7ko3t0xCWw8gJdn6T0Yv1-Fu0hjtDHZhgMKPvTq_yjuw7j7JflOsDK9ssqpvBUHa0fDVxh6nSmhyUbRh9CVdo_BISgnVcFoDM_7gvkX3bIr1No6Y1HrFFf9L_RX1CfWl9rl4mHW_9wfaN4EuQdqJEzxlcdAfTFjG4NBfI2M-fgxvWYqxuxajUyKGcTiC5L_dwZqq9MH_VvCFeP35_J-6F1CzZQ'
+
+	{
+	    "statusCode": "201 CREATED",
+	    "statusMessage": "Loan created successfully"
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
