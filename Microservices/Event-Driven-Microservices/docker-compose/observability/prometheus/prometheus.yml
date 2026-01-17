@@ -1,0 +1,29 @@
+global:
+ scrape_interval: 5s # Set the scrape interval to every 5 seconds # Configuring it to fetch the metrics from individual microservices every five seconds
+ evaluation_interval: 5s # Evaluate rules every 5 seconds # Evaluate the fetched metrics and show them in the Prometheus dashboard every five seconds
+ 
+scrape_configs:
+ - job_name: 'ms-accounts'
+   metrics_path: '/actuator/prometheus'
+   static_configs:
+    - targets: ['ms-accounts:8080']
+ - job_name: 'ms-loans'
+   metrics_path: '/actuator/prometheus'
+   static_configs:
+    - targets: ['ms-loans:8090']
+ - job_name: 'ms-cards'
+   metrics_path: '/actuator/prometheus'
+   static_configs:
+    - targets: ['ms-cards:9000']
+ - job_name: 'ms-gateway-server'
+   metrics_path: '/actuator/prometheus'
+   static_configs:
+    - targets: ['ms-gateway-server:8072']
+ - job_name: 'ms-eurekaserver'
+   metrics_path: '/actuator/prometheus'
+   static_configs:
+    - targets: ['ms-eurekaserver:8070']
+ - job_name: 'ms-config-server'
+   metrics_path: '/actuator/prometheus'
+   static_configs:
+    - targets: ['ms-config-server:8071']

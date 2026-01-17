@@ -1,0 +1,33 @@
+server:
+  http_listen_port: 3100 # Default port for Tempo
+  http_listen_address: 0.0.0.0 # Listen on all interfaces
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317 # OTLP gRPC endpoint
+        http:
+          endpoint: 0.0.0.0:4318 # OTLP HTTP endpoint
+
+ingester:
+  trace_idle_period: 10s # Idle period for traces
+  max_block_bytes: 1_000_000 # Maximum block size
+  max_block_duration: 5m # Maximum block duration
+
+compactor:
+  compaction:
+    compaction_window: 1h # Compaction window duration
+    max_compaction_objects: 1000000 # Maximum objects for compaction
+    block_retention: 1h # Block retention duration
+    compacted_block_retention: 10m # Compacted block retention duration
+
+storage:
+  trace:
+    backend: local # Local storage backend
+    local:
+      path: /tmp/tempo/blocks # Path for local storage
+    pool:
+      max_workers: 100 # Maximum workers for storage pool
+      queue_depth: 10000 # Queue depth for storage pool
