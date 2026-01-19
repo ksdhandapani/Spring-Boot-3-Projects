@@ -1,0 +1,6 @@
+package com.dhandapani.ms_accounts.dto;
+
+public record AccountsMessageDto(Long accountNumber, String name, String email, String mobileNumber) {
+
+}
+
