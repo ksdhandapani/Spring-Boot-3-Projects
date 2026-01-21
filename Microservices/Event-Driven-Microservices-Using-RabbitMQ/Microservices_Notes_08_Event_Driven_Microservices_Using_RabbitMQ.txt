@@ -1,0 +1,1338 @@
+*****************************************************************************
+Event-driven microservices using RabbitMQ, Spring Cloud Functions, and Stream
+*****************************************************************************
+
+>>> Understanding loose coupling
+--------------------------------
+
+To achieve loose coupling, we separate our application's business logic into independent microservices, such as accounts, cards, and loans. This allows for independent development, deployment, and scaling.
+
+>>> Temporarl coupling
+----------------------
+
+Temporal coupling occurs when a caller service waits for an immediate response from a callee service, causing delays if the callee is slow. This is common in synchronous communication between services.
+
+>>> Example of Temporal coupling
+
+For instance, if Microservice 1 depends on Microservice 2 and waits for a response, then Microservice 1 experiences temporal coupling. Any delay from Microservice 2 will negatively impact Microservice 1’s performance. Therefore, we should avoid temporal coupling whenever possible, especially since we are currently using synchronous communication through REST APIs.
+
+>>> How can we prevent temporal coupling?
+
+To mitigate temporal coupling, we should utilize asynchronous communication within our microservice architecture.
+
+>>> Asynchronous communication
+-----------------------------
+
+Asynchronous communication can effectively meet many real-world requirements, reducing the need for blocking operations.
+
+>>> Types of synchronous communication scenarios
+
+1. Imperative approach: Here, a dedicated thread is blocked while waiting for a response from Microservice 2, which is a straightforward synchronous method.
+  
+2. Reactive approach: In this method, the thread does not block; after invoking Microservice 2, it returns to the pool to handle other requests. A thread is only assigned when the response is received from Microservice 2.
+
+Although both approaches are synchronous, the reactive approach uses threads more efficiently. Synchronous communication may be essential for critical business scenarios requiring immediate user responses. However, whenever possible, asynchronous communication should be leveraged.
+
+>>> Building Event-Driven Microservices
+
+An event signifies a significant occurrence in a system, like a state transition, and can originate from multiple sources. To construct event-driven microservices, we need asynchronous communication between them.
+
+>>> Example of Event-Driven Microservices
+
+In an e-commerce application like Amazon, when you place an order, the order microservice notifies the delivery microservice. This communication isn't synchronous; instead, when the user makes a payment and the order is confirmed, the order microservice generates an event to notify the delivery microservice without waiting for a response. Its responsibility is solely to send the notification, demonstrating a classic example of event-driven microservices through asynchronous communication.
+
+>>> Event-driven architecture models
+
+Event-driven architectures can be built using two primary models.
+
+Publisher/Subscriber (Pub/Sub) Model: This model revolves around subscriptions. Producers generate events that are distributed to all subscribers for consumption. Once an event is received, it cannot be replayed, which means new subscribers joining later will not have access to past events.
+
+The Pub/Sub model is frequently paired with RabbitMQ as a popular option. 
+
+Event streaming model: In this model, events are written to a log in a sequential manner. Producers publish events as they occurr, and these events are stored in a well-ordered fashion. Instead of subsribing to events, consumers have the ability to read from any part of the event stream. One advantage of this model is that events can be replayed, allowing clients to join at anytime and receive all past events.
+
+We can also disable the replaying of events. 
+
+Apache Kafka is a robust platform widely utilized for event stream processing.
+
+Scenario that we are going to build with the help of Pub/Sub model.
+
+End User ------> Accounts Microservice ------> Event Broker ------> Message Service
+
+Someone try to create a new account (End User) ------> New account gets created and a request to send communication will be published into event broker & response to end user will be initiated (ms-accounts) ------> The event broker receives the event deails and push the same into a queue which the message service subscribed (Event Broker) ------> Receives the notification from the event broker and read the details from the queue. The data will be processed and an email, sms will be sent to the customer (Message Service) ------> Receives response that account created successfully (End User)
+
+Message Service ------> Event Broker --- (Async) ---> Accounts Microservice
+
+Once the message service process the communication, it publishes an event async to confirm the same (Message Service) ------> The event broker receives the event details and push the same into a queue which the accounts service subscribed (Event Broker) ------> Receives the notification from event broker and update the DB columns accordingly about communication to customer (Accounts Microservice)
+
+The communication between Message Service and Accounts Service will be always asynchronous. Even if Message Service is performing slowly or is completely down, it is not going to impact Accounts Service in any form.
+
+In fact, the Accounts and Message services, they never know where they are receiving the data, what is the other side of the microservice who is trying to send the data or who is trying to receive the data?
+
+They simply know to push the event to the event broker or to read the event details from the event broker, so this is the scenario which we are going to build inside Accounts Service.
+
+>>> Introduction to RabbitMQ
+
+RabbitMQ, an open-source message broker, is widely recognized for its utilization of AMQP (Advanced Message Queuing Protocol) and its ability to offer flexible asynchronous messaging, distributed deployment, and comprehensive monitoring. Furthermore, recent versions of RabbitMQ have incorporated event streaming functionalities into their feature set.
+
+Producer - The entity responsible for sending messages (Also known as the Publisher)
+Consumer - The entity tasked with receiving messages (Also known as subscriber)
+Message Broker - The middleware that receives messages from producers and directs them to appropriate consumers. The Message Broker can handle any number of producers and consumers.
+
+Producer --- Send or produce message to ---> Message Broker --- Receive or subscribe message from ---> Consumer
+
+The messaging model of AMQP operates on two principles: Exchanges and Queues
+
+Producers transmit messages to an exchange. Based on a specific routing rule, RabbitMQ determines the queues that should receive a copy of the message. Consumers, in turn, read messages from a queue.
+
+There is no rule that only one consumer has to be subscribed to a single queue.
+
+Any number of subscribers can be subscribed to a queue, and very similarly, a consumer can be subscribed to any number of queues.
+
+>>> Spring Cloud Function
+
+Spring Cloud Function is a framework that promotes the implementation of business logic as Java functions and decouples that logic from specific runtime targets, allowing the same code to run as a web endpoint, a stream processor, or a serverless task
+
+Spring Cloud Function facilitates the development of business logic by utilizing functions that adhere to the standard interfaces introduced in Java 8, namely Supplier, Function, and Consumer.
+
+Supplier: A supplier is a function that produces an output without requiring any input. It can also be referred to as a producer, publisher, or source.
+
+Function: A function accepts input and generates an output. It is commonly referred to as a processor.
+
+Consumer: A consumer is a function that consumes input but does not produce any output. It can also be called as a subscriber or sink.
+
+Spring Cloud Function features:
+
+- Choice of programming styles - reactive, imperative or hybrid.
+- POJO functions (i.e. if something fits the @FunctionalInterface semantics, we will treat it as Function)
+- Function composition, which involves composing imperative functions with reactive.
+- REST support to expose functions as HTTP endpoints, etc.
+- Streaming data (via Apache Kafka, Solace, RabbitMQ and more) to/from functions via Spring Cloud Stream Framework
+- Packaging functions for deployments, specific to the target platform (e.g. AWS Lambda and possibly other "serverless" service providers)
+
+Ref: https://spring.io/projects/spring-cloud-function
+
+Developing business logic with the help of Spring Cloud Function is going to be simple, and at the same time, it is going to provide you with a lot of flexibility to expose your business logic using various patterns. By default, all your logic that you are going to wire inside your functions will be exposed as a REST API automatically by Spring Cloud Function.
+
+We can also integrate Spring Cloud Functions with the event brokers like RabbitMQ, Apache Kafka by adding one more project, which is Spring Cloud Stream.
+
+The event broker can be RabbitMQ in the scenario of the Pub/Sub model, or it can be Apache Kafka in the scenario of the Event-streaming model. 
+
+>>> Implementation: Develop Message Microservice using Spring Cloud Functions
+
+Step 1: Create a new Spring Boot project with the following dependency
+
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-function-context</artifactId>
+		</dependency>
+
+Step 2: Create a Package named com.dhandapani.ms_message.dto and a Record named 'AccountsMesssgeDto'
+
+The record AccountsMessageDto is going to receive the message from the message broker. Out ms-accounts service is going to send the message to the message broker in the format of this DTO and the same we are going to receive inside this ms-message service and process the same. 
+
+*** Whenever we use Record, automatically the container is going to generate the getters for your fields and is going to make the fields also final, which means once the object of this record is created, all the dta inside it is going to be final. 
+
+		package com.dhandapani.ms_message.dto;
+
+		public record AccountsMessageDto(Long accountNumber, String name, String email, String mobileNumber) {
+
+		}
+
+Step 3: Create a Package named com.dhandapani.ms_message.functions
+
+Inside this package, we are going to create the functions required for our business logic. 
+
+Step 4: Create a class named MessageFunctions under the functions package
+
+The functions that we are going to write inside this class are going to handle the messaging to the end user.
+
+		package com.dhandapani.ms_message.functions;
+
+		import java.util.function.Function;
+
+		import org.slf4j.Logger;
+		import org.slf4j.LoggerFactory;
+		import org.springframework.context.annotation.Bean;
+		import org.springframework.context.annotation.Configuration;
+
+		import com.dhandapani.ms_message.dto.AccountsMessageDto;
+
+		@Configuration
+		public class MessageFunctions {
+
+			private static final Logger log = LoggerFactory.getLogger(MessageFunctions.class);
+
+			@Bean
+			public Function<AccountsMessageDto, AccountsMessageDto> sendEmail() {
+				return accountsMessageDto -> {
+					log.info("Sending Email with the details: {}", accountsMessageDto);
+					return accountsMessageDto;
+				};
+			}
+
+			@Bean
+			public Function<AccountsMessageDto, Long> sendSms() {
+				return accountsMessageDto -> {
+					log.info("Sending SMS with the details: {}", accountsMessageDto);
+					return accountsMessageDto.accountNumber();
+				};
+			}
+
+		}
+
+Step 5: Add the following dependency to pox.xml to convert functions to REST APIs
+
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-function-web</artifactId>
+		</dependency>
+
+Cloud Function dependency that automatically exposes your Java functions as HTTP endpoints within a standalone Spring Boot web application
+
+Full content of pom.xml
+
+		<?xml version="1.0" encoding="UTF-8"?>
+		<project xmlns="http://maven.apache.org/POM/4.0.0"
+			xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+			xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+			<modelVersion>4.0.0</modelVersion>
+			<parent>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-starter-parent</artifactId>
+				<version>4.0.0</version>
+				<relativePath /> <!-- lookup parent from repository -->
+			</parent>
+			<groupId>com.dhandapani</groupId>
+			<artifactId>ms-message</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+			<name>ms-message</name>
+			<description>Messaging Service for XYZ Bank Microservice</description>
+			<url />
+			<licenses>
+				<license />
+			</licenses>
+			<developers>
+				<developer />
+			</developers>
+			<scm>
+				<connection />
+				<developerConnection />
+				<tag />
+				<url />
+			</scm>
+			<properties>
+				<java.version>21</java.version>
+				<spring-cloud.version>2025.1.0</spring-cloud.version>
+			</properties>
+			<dependencies>
+				<!-- REQUIRED for spring-cloud-starter-function-web -->
+				<dependency>
+					<groupId>org.springframework.boot</groupId>
+					<artifactId>spring-boot-starter-webflux</artifactId>
+				</dependency>
+
+				<dependency>
+					<groupId>org.springframework.cloud</groupId>
+					<artifactId>spring-cloud-function-context</artifactId>
+				</dependency>
+
+				<dependency>
+					<groupId>org.springframework.cloud</groupId>
+					<artifactId>spring-cloud-starter-function-web</artifactId>
+				</dependency>
+				<dependency>
+					<groupId>org.springframework.boot</groupId>
+					<artifactId>spring-boot-starter-test</artifactId>
+					<scope>test</scope>
+				</dependency>
+			</dependencies>
+			<dependencyManagement>
+				<dependencies>
+					<dependency>
+						<groupId>org.springframework.cloud</groupId>
+						<artifactId>spring-cloud-dependencies</artifactId>
+						<version>${spring-cloud.version}</version>
+						<type>pom</type>
+						<scope>import</scope>
+					</dependency>
+				</dependencies>
+			</dependencyManagement>
+
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.springframework.boot</groupId>
+						<artifactId>spring-boot-maven-plugin</artifactId>
+					</plugin>
+				</plugins>
+			</build>
+
+		</project>
+
+Step 6: Rebuild the project and start the application.
+
+In the logs, we can see that our functions are getting mapped successfully
+
+[0;39m[36mo.s.c.f.web.mvc.FunctionHandlerMapping  [0;39m [2m:[0;39m FunctionCatalog: org.springframework.cloud.function.context.catalog.BeanFactoryAwareFunctionRegistry@5ec9eefa
+
+Step 7: Test the generated APIs using Postman
+
+The paths of the APIs should match the names of the functions that we have defined
+
+/sendEmail - public Function<AccountsMessageDto, AccountsMessageDto> sendEmail()
+/sendSms - public Function<AccountsMessageDto, Long> sendSms()
+
+API Call - sendEmail
+
+		curl --location 'http://localhost:8080/sendEmail' \
+		--header 'Content-Type: application/json' \
+		--data-raw '{
+		    "accountNumber": 1234545454,
+		    "name": "Dhandapani S",
+		    "email": "dhandapani.s@email.com",
+		    "mobileNumber": "4578905467"
+		}'
+
+Response
+
+		{
+		    "accountNumber": 1234545454,
+		    "name": "Dhandapani S",
+		    "email": "dhandapani.s@email.com",
+		    "mobileNumber": "4578905467"
+		}
+
+API Call - sendSms
+
+		curl --location 'http://localhost:8080/sendSms' \
+		--header 'Content-Type: application/json' \
+		--data-raw '{
+		    "accountNumber": 1234545454,
+		    "name": "Dhandapani S",
+		    "email": "dhandapani.s@email.com",
+		    "mobileNumber": "4578905467"
+		}'
+
+Response
+
+		1234545454
+
+Step 8: Invoke both functions as a single logical unit
+
+Apart from invoking these functions independently or individually, we also want to give flexibility to our clients to invoke a REST API, and this REST API is going to invoke both of these functions as a single logical unit. To achieve that, we need to compose our function.
+
+In order to compose our functions as a single logical unit, add the following updates to the application.properties file
+
+Content of application.properties
+
+	spring.application.name=ms-message
+	server.port=9010
+	spring.cloud.function.definition=sendEmail|sendSms
+
+Rebuild the application and test the APIs on port 9010
+
+API Call - sendEmail
+
+		curl --location 'http://localhost:9010/sendEmail' \
+		--header 'Content-Type: application/json' \
+		--data-raw '{
+		    "accountNumber": 1234545454,
+		    "name": "Dhandapani S",
+		    "email": "dhandapani.s@email.com",
+		    "mobileNumber": "4578905467"
+		}'
+
+Response
+
+		{
+		    "accountNumber": 1234545454,
+		    "name": "Dhandapani S",
+		    "email": "dhandapani.s@email.com",
+		    "mobileNumber": "4578905467"
+		}
+
+API Call - sendSms
+
+		curl --location 'http://localhost:9010/sendSms' \
+		--header 'Content-Type: application/json' \
+		--data-raw '{
+		    "accountNumber": 1234545454,
+		    "name": "Dhandapani S",
+		    "email": "dhandapani.s@email.com",
+		    "mobileNumber": "4578905467"
+		}'
+
+Response
+
+		1234545454
+
+Whenever we try to compose multiple functions, it is going to expose a REST API with the name by combining all our functions
+
+API Call: Combined (both SendEmail and SendSms)
+
+		curl --location 'http://localhost:9010/sendEmailSendSms' \
+		--header 'Content-Type: application/json' \
+		--data-raw '{
+		    "accountNumber": 1234545454,
+		    "name": "Dhandapani S",
+		    "email": "dhandapani.s@email.com",
+		    "mobileNumber": "4578905467"
+		}'
+
+Response
+
+		1234545454
+
+Logs
+
+		[2m2026-01-08T08:31:16.394+05:30[0;39m [32m INFO[0;39m [35m5644[0;39m [2m--- [ms-message] [nio-9010-exec-7] [0;39m[36mc.d.m.functions.MessageFunctions        [0;39m [2m:[0;39m Sending Email with the details: AccountsMessageDto[accountNumber=1234545454, name=Dhandapani S, email=dhandapani.s@email.com, mobileNumber=4578905467]
+		[2m2026-01-08T08:31:16.395+05:30[0;39m [32m INFO[0;39m [35m5644[0;39m [2m--- [ms-message] [nio-9010-exec-7] [0;39m[36mc.d.m.functions.MessageFunctions        [0;39m [2m:[0;39m Sending SMS with the details: AccountsMessageDto[accountNumber=1234545454, name=Dhandapani S, email=dhandapani.s@email.com, mobileNumber=4578905467]
+
+Behind the scenes, both functions were executed.
+
+>>> Spring Cloud Stream
+-----------------------
+
+Spring Cloud Stream is a framework designed for creating scalable, event-driven, and streaming applications. Its core principle is to allow developers to focus on the business logic while the framework takes care of infrastructure-related tasks, such as integration with a message broker.
+
+Spring Cloud Stream leverages the native capabilities of each message broker, while also providing an abstraction layer to ensure a consistent experience regardless of the underlying middleware. By just adding a dependency to your project, you can have Functions automatically connected to an external message broker. The beauty of this approach is that you do not need to modify any application code; you adjust the configuration in the application.yml file.
+
+The framework supports integrations with RabbitMQ, Apache Kafka, Kafka Streams, and Amazon Kinesis. Partners for Google PubSub, Solace PubSub+, Azure Event Hubs, and Apache RocketMQ also maintain integrations.
+
+>>> Core Blocks of Spring Cloud Stream:
+
+- Destination Binders: Components responsible for providing integration with the external messaging systems.
+- Destination Bindings: Bridge between the external messaging systems and application code (Producer/Consumer) provided y the end-user.
+- Message: The canonical data structure used by producers and consumers to communicate with Destination Binders (and thus other applications via external messaging systems).
+
+In Spring Cloud Stream, Destination Binder and Binding are core concepts that define how your application connects to messaging systems (Kafka, RabbitMQ, etc.) and where messages flow.
+
+>>> Binder
+
+A Binder is the bridge between Spring Cloud Stream and a messaging middleware.
+
+Think of it as: “The adapter that knows how to talk to Kafka, RabbitMQ, Pulsar, etc.”
+
+Common binders
+
+Kafka Binder → Apache Kafka
+Rabbit Binder → RabbitMQ
+
+Example
+	spring:
+	  cloud:
+	    stream:
+	      binders:
+	        kafka-binder:
+	          type: kafka
+	          environment:
+	            spring:
+	              kafka:
+	                bootstrap-servers: localhost:9092
+
+✔ Defines how to connect
+✔ One application can have multiple binders
+
+>>> Destination
+
+A Destination is the actual messaging entity: 
+
+Kafka → Topic
+RabbitMQ → Exchange / Queue
+
+Examples:
+
+orders-topic
+payments-queue
+
+>>> Binding
+
+A Binding connects: Application channel <-> Destination (via a Binder)
+
+In simple terms
+
+Binding = which destination my app reads from or writes to
+
+Binding Types
+
+Spring Cloud Stream uses a functional programming model:
+
+Function Role	Binding
+
+Supplier	Output binding
+Consumer	Input binding
+Function	Input + Output
+
+>>> Implementation: Develop Message Microservice using Spring Cloud Stream
+
+Make the following changes to the ms-messages microservice to integrate our functions with RabbitMQ.
+
+Step 1: Update the dependencies in pom.xml 
+
+Comment out the dependencies related to Spring Cloud Functions
+
+		<!-- REQUIRED for spring-cloud-starter-function-web -->
+		<!--		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-webflux</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-function-context</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-function-web</artifactId>
+		</dependency>-->
+
+Add the dependencies related to Stream
+
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-stream</artifactId>
+		</dependency>
+		<!-- We want to use RabbitMQ as a message broker -->
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-stream-binder-rabbit</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-stream-test-binder</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+Whenever we add 'spring-cloud-stream' dependency to our project, internally it is also going to add Spring Cloud Function-related dependencies, so just to avoid the redundancy, we are commenting out the dependencies we added previously related to Spring Cloud Function.
+
+Step 2: Add the following properties to the application.properties file
+
+		### SPRING CLOUD STREAM CONFIGURATION
+
+		# Function definitions: defining a function pipeline where messages are first processed by sendEmail and then by sendSms.
+		spring.cloud.function.definition=sendEmail|sendSms
+		# sendEmailsendSms-in-0 is the name of the binding created by combining the two function names. It is going to act as an input binding.
+		# The destination is the name of the queue from which messages will be consumed.
+		spring.cloud.stream.bindings.sendEmailsendSms-in-0.destination=send-communication
+		# Setting the consumer group to the application name to ensure that multiple instances of the same application share the same group.
+		spring.cloud.stream.bindings.sendEmailsendSms-in-0.group=${spring.application.name}
+
+		### RabbitMQ BINDER CONFIGURATION
+
+		spring.rabbitmq.host=localhost
+		spring.rabbitmq.port=5672
+		spring.rabbitmq.username=guest
+		spring.rabbitmq.password=guest
+		spring.rabbitmq.connection-timeout=10s
+
+Step 3: Update the ms-accounts microservice to send the messages and push them into the RabbitMQ
+
+Step 3.1: Add the following dependencies to the pom.xml of ms-accounts
+
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-stream</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-stream-binder-rabbit</artifactId>
+        </dependency>
+
+
+Step 3.2: Create a DTO Record named 'AccountsMessageDto' under the package 'com.dhandapani.ms_accounts.dto'
+
+		package com.dhandapani.ms_accounts.dto;
+
+		public record AccountsMessageDto(Long accountNumber, String name, String email, String mobileNumber) {
+
+		}
+
+Step 3.3: Update application.properties of ms-accounts
+
+Whenever we are trying to create a new account inside the ms-accounts service, we need to make sure we are triggering an event into the message broker. For the same, let's add the properties below to the application.properties ofthe  ms-accounts service
+
+		### SPRING CLOUD STREAM CONFIGURATION
+
+		# sendCommunication-out-0 is the binding name. In the Accounts Microservice, we do not have any function, so we can give any binding name for the output binding.
+		# The destination is the name of the queue to which messages will be sent.
+		spring.cloud.stream.bindings.sendCommunication-out-0.destination=send-communication
+
+		### RabbitMQ BINDER CONFIGURATION
+
+		spring.rabbitmq.host=localhost
+		spring.rabbitmq.port=5672
+		spring.rabbitmq.username=guest
+		spring.rabbitmq.password=guest
+		spring.rabbitmq.connection-timeout=10s
+
+Step 3.4: Update the implementation of 'public void createAccount(CustomerDto customerDto)' function present inside 'AccountServiceImpl'
+
+- Autowire StreamBridge
+- Create a new method named 'sendCommunication' responsible for sending communication
+- Update the implementation of 'createAccount'
+
+	AccountServiceImpl
+
+		@Service
+		/**
+		 * If there is a single constructor, you do not have to Autowire the
+		 * dependencies, Spring will do it automatically because we have a single
+		 * constructor which is accepting the two dependencies as parameters
+		 */
+		@AllArgsConstructor
+		public class AccountServiceImpl implements IAccountService {
+			
+			private static final Logger logger = LoggerFactory.getLogger(AccountServiceImpl.class);
+
+			private AccountRepository accountRepository;
+			private CustomerRepository customerRepository;
+			private final StreamBridge streamBridge;
+
+			@Override
+			public void createAccount(CustomerDto customerDto) {
+				Customer customer = CustomerMapper.mapToCustomer(customerDto, new Customer());
+				System.out.println("Customer Data: " + customer);
+				Optional<Customer> optionalCoustomer = customerRepository.findByMobileNumber(customerDto.getMobileNumber());
+				if (optionalCoustomer.isPresent()) {
+					throw new CustomerAlreadyExistsException(
+							"Customer already registered with given mobile number: " + customerDto.getMobileNumber());
+				} else {
+					System.out.println("Customer with mobile number " + customer.getMobileNumber() + "is not available");
+				}
+				Customer savedCustomer = customerRepository.save(customer);
+				Account savedAccount = accountRepository.save(createNewAccount(savedCustomer));
+				sendCommunication(savedAccount, savedCustomer);
+				logger.info("Account created successfully at {}", LocalDateTime.now());
+			}
+			
+			private void sendCommunication(Account account, Customer customer) {
+				AccountsMessageDto accountsMessageDto = new AccountsMessageDto(account.getAccountNumber(), customer.getName(),
+						customer.getEmail(), customer.getMobileNumber());
+				logger.info("Sending communication messages for the details: {}", accountsMessageDto);
+				var result = streamBridge.send("sendCommunication-out-0", accountsMessageDto);
+				logger.info("Is the message sent successfully? {}", result);
+			}
+
+			/**
+			 * 
+			 * @param customer
+			 * @return
+			 */
+			private Account createNewAccount(Customer customer) {
+				Account newAccount = new Account();
+
+				long randomAccountNumber = 1000000000L + new Random().nextInt(900000000);
+				newAccount.setAccountNumber(randomAccountNumber);
+
+				newAccount.setCustomerId(customer.getCustomerId());
+				newAccount.setAccountType(AccountConstant.SAVINGS);
+				newAccount.setBranchAddress(AccountConstant.ADDRESS);
+				return newAccount;
+			}
+
+			@Override
+			public CustomerDto fetchAccountByMobileNumber(String mobileNumber) {
+				Customer foundCustomer = customerRepository.findByMobileNumber(mobileNumber)
+						.orElseThrow(() -> new ResourceNotFoundException("Customer", "mobileNumber", mobileNumber));
+
+				Account foundAccount = accountRepository.findByCustomerId(foundCustomer.getCustomerId()).orElseThrow(
+						() -> new ResourceNotFoundException("Account", "customerId", foundCustomer.getCustomerId().toString()));
+
+				CustomerDto customerDto = CustomerMapper.mapToCustomerDto(foundCustomer, new CustomerDto());
+				AccountDto accountDto = AccountMapper.mapToAccountDto(foundAccount, new AccountDto());
+				customerDto.setAccountDto(accountDto);
+				return customerDto;
+
+			}
+
+			@Override
+			public boolean updateAccount(CustomerDto customerDto) {
+				boolean isUpdated = false;
+				AccountDto accountDto = customerDto.getAccountDto();
+				if (accountDto != null) {
+					Account foundAccount = accountRepository.findById(accountDto.getAccountNumber())
+							.orElseThrow(() -> new ResourceNotFoundException("Account", "accountNumber",
+									accountDto.getAccountNumber().toString()));
+
+					AccountMapper.mapToAccount(accountDto, foundAccount);
+					Account savedAccount = accountRepository.save(foundAccount);
+
+					Long customerId = savedAccount.getCustomerId();
+					Customer foundCustomer = customerRepository.findById(customerId)
+							.orElseThrow(() -> new ResourceNotFoundException("Customer", "customerId", customerId.toString()));
+
+					CustomerMapper.mapToCustomer(customerDto, foundCustomer);
+					customerRepository.save(foundCustomer);
+					isUpdated = true;
+
+				}
+				return isUpdated;
+			}
+
+			@Override
+			public boolean deleteAccount(String mobileNumber) {
+				Customer foundCustomer = customerRepository.findByMobileNumber(mobileNumber)
+						.orElseThrow(() -> new ResourceNotFoundException("Customer", "mobileNumber", mobileNumber));
+				accountRepository.deleteByCustomerId(foundCustomer.getCustomerId());
+				customerRepository.deleteById(foundCustomer.getCustomerId());
+				return true;
+			}
+
+		}
+
+Step 4: Start the applications and test
+
+Step 4.1: Start RabbitMQ using the following Docker command
+
+Ref: https://www.rabbitmq.com/docs/download
+
+		# latest RabbitMQ 4.x
+		docker run -d -it --rm --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:4-management
+
+		PS C:\Users\LENOVO> docker run -d -it --rm --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:4-management
+		Unable to find image 'rabbitmq:4-management' locally
+		4-management: Pulling from library/rabbitmq
+		2f3bad24fd39: Pull complete
+		301e38d0245a: Pull complete
+		c714900b34f2: Pull complete
+		9b22d1d2a9ef: Pull complete
+		cad36e3b6040: Pull complete
+		37939810e88f: Pull complete
+		eaca3ae779fd: Pull complete
+		dd960ab3c837: Pull complete
+		bf13110cc734: Pull complete
+		24e49b13700c: Pull complete
+		Digest: sha256:5b38b93d6f8cecc6263c0b774b31acd60849bf4d06b2e61169f0c28c1c55c232
+		Status: Downloaded newer image for rabbitmq:4-management
+		606875a342b75af516f6dff558ebbad550c90c02a0bc88300a41481f967f3633
+		PS C:\Users\LENOVO> docker ps
+		CONTAINER ID   IMAGE                   COMMAND                  CREATED         STATUS         PORTS                                                                                          NAMES
+		606875a342b7   rabbitmq:4-management   "docker-entrypoint.s…"   3 minutes ago   Up 3 minutes   0.0.0.0:5672->5672/tcp, [::]:5672->5672/tcp, 0.0.0.0:15672->15672/tcp, [::]:15672->15672/tcp   rabbitmq
+		PS C:\Users\LENOVO>
+
+Step 4.2: Once RabbitMQ is started, start other microservices
+
+ms-config-server -> ms-eurekaserver -> ms-accounts -> ms-message -> ms-gateway-server
+
+We are not going to start ms-loans and ms-cards because we did not make any changes inside them, and we are also not going to test any scenarios related to loans and cards. 
+
+Since we have secured the ms-gateway-server with the help of Spring Security, we should also start the KeyCloak server, which is going to act as our auth server.
+
+Inside our Docker containers, we have a KeyCloak container in a stopped mode, so we will try to start the same. Please do not try to delete the KeyCloak container inside your system. If we delete it, we need to set up the client details and role information every time. So to avoid that, we need to make sure we are only stopping it, but not deleting the container whenever we do not need it. 
+
+Step 4.3: Start the stopped KeyCloak container
+
+Container ID of KeyCloak Server: e74f42741203918e27bf65aee47c5cc74546dfc19ff3f1cbf144481b65b350bc
+
+		docker start e74f42741203918e27bf65aee47c5cc74546dfc19ff3f1cbf144481b65b350bc
+
+Logs:
+
+		PS C:\Users\LENOVO> docker start e74f42741203918e27bf65aee47c5cc74546dfc19ff3f1cbf144481b65b350bc
+		e74f42741203918e27bf65aee47c5cc74546dfc19ff3f1cbf144481b65b350bc
+		PS C:\Users\LENOVO> docker ps
+		CONTAINER ID   IMAGE                              COMMAND                  CREATED         STATUS          PORTS                                                                                          NAMES
+		09df9c8f122e   rabbitmq:4-management              "docker-entrypoint.s…"   3 minutes ago   Up 3 minutes    0.0.0.0:5672->5672/tcp, [::]:5672->5672/tcp, 0.0.0.0:15672->15672/tcp, [::]:15672->15672/tcp   rabbitmq
+		e74f42741203   quay.io/keycloak/keycloak:26.4.7   "/opt/keycloak/bin/k…"   3 weeks ago     Up 11 seconds   127.0.0.1:8050->8080/tcp                                                                       trusting_antonelli
+		PS C:\Users\LENOVO>
+
+Access RabbitMQ Console at http://localhost:15672
+
+The username and password are going to be guest : guest
+
+If we click on the 'Exchanges' tab, we can see an exchange created with a name 'send-communication', the same one we defined inside the ms-accounts microservice as the destination. 
+
+If we click on 'send-communication' and expand 'Bindings', we should be able to see the queue name where the messages will be redirected whenever this exchange receives a message. The queue name is 'send-communication.ms-message'. We can also check whether the queue has been created or not by going to the 'Queues and Streams' tab.
+
+The '.ms-message' in the queue name is the group name that we configured in the application.properties file.
+
+Step 4: Invoke the 'Create Account API' of the ms-accounts microservice
+
+		curl --location 'http://localhost:8072/xyzbank/ms-accounts/api/accounts/create' \
+		--header 'Content-Type: application/json' \
+		--header 'Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI5WFhaNElNenlKeWNtSFhrajllaE9XTmJYQ3p1bW9aQ1c3TFdFbXFuRS1nIn0.eyJleHAiOjE3Njc5MjY3MjksImlhdCI6MTc2NzkyNjY2OSwianRpIjoidHJydGNjOjg5MmU5N2Y3LTA3NTgtNDVlNy05MmNiLWE4NzM3ZmFkZmFkZSIsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6ODA1MC9yZWFsbXMvbWFzdGVyIiwiYXVkIjoiYWNjb3VudCIsInN1YiI6IjU5NTdiOWJiLTc5Y2EtNGMyZi1hNTg2LWUzMzcwMTFkY2NmZCIsInR5cCI6IkJlYXJlciIsImF6cCI6Inh5emJhbmstY2FsbGNlbnRlci1jYyIsImFjciI6IjEiLCJhbGxvd2VkLW9yaWdpbnMiOlsiLyoiXSwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbIkxPQU5TIiwiZGVmYXVsdC1yb2xlcy1tYXN0ZXIiLCJBQ0NPVU5UUyIsIm9mZmxpbmVfYWNjZXNzIiwidW1hX2F1dGhvcml6YXRpb24iLCJDQVJEUyJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFjY291bnQiOnsicm9sZXMiOlsibWFuYWdlLWFjY291bnQiLCJtYW5hZ2UtYWNjb3VudC1saW5rcyIsInZpZXctcHJvZmlsZSJdfX0sInNjb3BlIjoib3BlbmlkIGVtYWlsIHByb2ZpbGUiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsImNsaWVudEhvc3QiOiIxNzIuMTcuMC4xIiwicHJlZmVycmVkX3VzZXJuYW1lIjoic2VydmljZS1hY2NvdW50LXh5emJhbmstY2FsbGNlbnRlci1jYyIsImNsaWVudEFkZHJlc3MiOiIxNzIuMTcuMC4xIiwiY2xpZW50X2lkIjoieHl6YmFuay1jYWxsY2VudGVyLWNjIn0.pEDXmz3ZDw5umAO9KhYoFU2KDwl7D3NVdE9O7lRA7ZjJVDXpMzu9s9KH_jReynkMH_3szKmE9zR_aJ5hfIc9iQG7Kfp8EzKQOF13SGt6QKzOKF_Kogs6OHETke5PTftfl-u7P-pyDBB8EPiTKg3yJ6_aQNci7EiAovfyji2nNkDWC3lBx4eIeSmTJSJM262sO88XVzVzohYcUkJG-g-v_2cRVzQscEQPXF-OHU_0qLfVdZ5pdTJOtEOBlcuXPmVlSs6A4xb3WfcPREQK2HRLSwHLc4QdEbT2BK9mEz1gWFmbDWLBF-t2UnNieini8_7k3IuQPjNesUcVg8nUMM9mmA' \
+		--data-raw '{
+		    "name": "Dhandapani S",
+		    "email": "dhandapani.s@email.com",
+		    "mobileNumber": "4578905467"
+		}'
+
+
+		{
+		    "statusCode": "201 CREATED",
+		    "statusMessage": "Account created successfully"
+		}
+
+Logs of ms-accounts:
+
+		[2m2026-01-09T08:14:32.084+05:30[0;39m [32m INFO [ms-accounts,,][0;39m [35m5724[0;39m [2m--- [ms-accounts] [nio-8080-exec-1] [0;39m[36mc.d.m.service.impl.AccountServiceImpl   [0;39m [2m:[0;39m Sending communication messages for the details: AccountsMessageDto[accountNumber=1140363779, name=Dhandapani S, email=dhandapani.s@email.com, mobileNumber=4578905467]
+		[2m2026-01-09T08:14:32.099+05:30[0;39m [32m INFO [ms-accounts,,][0;39m [35m5724[0;39m [2m--- [ms-accounts] [nio-8080-exec-1] [0;39m[36mo.s.c.s.binder.DefaultBinderFactory     [0;39m [2m:[0;39m Creating binder: rabbit
+		[2m2026-01-09T08:14:32.099+05:30[0;39m [32m INFO [ms-accounts,,][0;39m [35m5724[0;39m [2m--- [ms-accounts] [nio-8080-exec-1] [0;39m[36mo.s.c.s.binder.DefaultBinderFactory     [0;39m [2m:[0;39m Constructing binder child context for rabbit
+		[2m2026-01-09T08:14:32.247+05:30[0;39m [32m INFO [ms-accounts,,][0;39m [35m5724[0;39m [2m--- [ms-accounts] [nio-8080-exec-1] [0;39m[36mo.s.c.s.binder.DefaultBinderFactory     [0;39m [2m:[0;39m Caching the binder: rabbit
+		[2m2026-01-09T08:14:32.266+05:30[0;39m [32m INFO [ms-accounts,,][0;39m [35m5724[0;39m [2m--- [ms-accounts] [nio-8080-exec-1] [0;39m[36mo.s.a.r.c.CachingConnectionFactory      [0;39m [2m:[0;39m Attempting to connect to: [localhost:5672]
+		[2m2026-01-09T08:14:32.362+05:30[0;39m [32m INFO [ms-accounts,,][0;39m [35m5724[0;39m [2m--- [ms-accounts] [nio-8080-exec-1] [0;39m[36mo.s.a.r.c.CachingConnectionFactory      [0;39m [2m:[0;39m Created new connection: rabbitConnectionFactory#661e5ac3:0/SimpleConnection@65161fd8 [delegate=amqp://guest@127.0.0.1:5672/, localPort=63821]
+		[2m2026-01-09T08:14:32.416+05:30[0;39m [32m INFO [ms-accounts,,][0;39m [35m5724[0;39m [2m--- [ms-accounts] [nio-8080-exec-1] [0;39m[36mo.s.c.s.m.DirectWithAttributesChannel   [0;39m [2m:[0;39m Channel 'ms-accounts.sendCommunication-out-0' has 1 subscriber(s).
+		[2m2026-01-09T08:14:32.479+05:30[0;39m [32m INFO [ms-accounts,,][0;39m [35m5724[0;39m [2m--- [ms-accounts] [nio-8080-exec-1] [0;39m[36mo.s.a.r.c.CachingConnectionFactory      [0;39m [2m:[0;39m Attempting to connect to: [localhost:5672]
+		[2m2026-01-09T08:14:32.492+05:30[0;39m [32m INFO [ms-accounts,,][0;39m [35m5724[0;39m [2m--- [ms-accounts] [nio-8080-exec-1] [0;39m[36mo.s.a.r.c.CachingConnectionFactory      [0;39m [2m:[0;39m Created new connection: rabbitConnectionFactory.publisher#c8d5a31:0/SimpleConnection@2797c5d2 [delegate=amqp://guest@127.0.0.1:5672/, localPort=63823]
+		[2m2026-01-09T08:14:32.511+05:30[0;39m [32m INFO [ms-accounts,,][0;39m [35m5724[0;39m [2m--- [ms-accounts] [nio-8080-exec-1] [0;39m[36mc.d.m.service.impl.AccountServiceImpl   [0;39m [2m:[0;39m Is the message sent successfully? true
+		[2m2026-01-09T08:14:32.511+05:30[0;39m [32m INFO [ms-accounts,,][0;39m [35m5724[0;39m [2m--- [ms-accounts] [nio-8080-exec-1] [0;39m[36mc.d.m.service.impl.AccountServiceImpl   [0;39m [2m:[0;39m Account created successfully at 2026-01-09T08:14:32.511357500
+
+Logs of ms-message:
+
+		[2m2026-01-09T07:54:08.840+05:30[0;39m [32m INFO[0;39m [35m8188[0;39m [2m--- [ms-message] [           main] [0;39m[36mc.d.ms_message.MsMessageApplication     [0;39m [2m:[0;39m Started MsMessageApplication in 2.032 seconds (process running for 2.623)
+		[2m2026-01-09T08:14:32.630+05:30[0;39m [32m INFO[0;39m [35m8188[0;39m [2m--- [ms-message] [on.ms-message-1] [0;39m[36mc.d.m.functions.MessageFunctions        [0;39m [2m:[0;39m Sending Email with the details: AccountsMessageDto[accountNumber=1140363779, name=Dhandapani S, email=dhandapani.s@email.com, mobileNumber=4578905467]
+		[2m2026-01-09T08:14:32.633+05:30[0;39m [32m INFO[0;39m [35m8188[0;39m [2m--- [ms-message] [on.ms-message-1] [0;39m[36mc.d.m.functions.MessageFunctions        [0;39m [2m:[0;39m Sending SMS with the details: AccountsMessageDto[accountNumber=1140363779, name=Dhandapani S, email=dhandapani.s@email.com, mobileNumber=4578905467]
+		[2m2026-01-09T08:14:32.655+05:30[0;39m [32m INFO[0;39m [35m8188[0;39m [2m--- [ms-message] [on.ms-message-1] [0;39m[36mo.s.a.r.c.CachingConnectionFactory      [0;39m [2m:[0;39m Attempting to connect to: [localhost:5672]
+
+Step 5: Building a Pub-Sub Model (Sending event from ms-message to ms-accounts)
+
+1. Someone tries to create an account.
+2. A new account gets created, and a request to send communication will be published into the event broker, and a response to the end user will be initiated.
+3. The event broker receives the event details and pushes the same into a queue that the message service is subscribed to.
+3. The end user receives a response that the account was created successfully.
+4. Receives the notification from the event broker and reads the details from the queue. The data will be processed, and an email, sms will be sent to the customer.
+5. (ms-message) Once the message service processes the communication, it publishes an event async to confirm the same.
+6. (Event Broker) The event broker receives the event details and pushes the same into a queue that the account service subscribed to.
+7. (accounts-ms) Receives the notification from the event broker and updates the DB columns accordingly about communication to the customer
+
+As of now, the event streaming is happening from the ms-account to ms-message service. As a next step, we should also try to stream an event from the ms-message to to ms-accounts service.
+
+Step 5.1: Add the following properties to application.properties of ms-message
+
+		# sendEmailSendSms-out-0 is the name of the output binding created by combining the two function names. It is going to act as an output binding.
+		spring.cloud.stream.bindings.sendEmailsendSms-out-0.destination=processed-communication
+
+We may have many questions now, why we did not make any changes inside the ms-message service, as we did inside the ms-accounts service to send the message with the help of this stream bridge bean and invoking the send method and mentioning what the output binding is. We do not need to follow all these steps whenever we are using Spring Cloud Functions. That is one of the advantages that we have, so behind the scenes, how it is going to work is, our Spring Cloud Stream knows that an output from this function combination, which is 'sendEmailsendSms', can be sent as a message to the exchange with the name 'processed-communication'
+
+Step 5.2: Create a new class named 'AccountsFunction' under a new package 'com.dhandapani.ms_accounts.functions'
+
+	AccountsFunctions
+
+		package com.dhandapani.ms_accounts.functions;
+
+		import java.util.function.Consumer;
+
+		import org.slf4j.Logger;
+		import org.slf4j.LoggerFactory;
+		import org.springframework.context.annotation.Configuration;
+
+		@Configuration
+		public class AccountsFunctions {
+			private static final Logger logger = LoggerFactory.getLogger(AccountsFunctions.class);
+
+			public Consumer<Long> updateCommunication() {
+				return accountNumber -> {
+					logger.info("Updating communication status for account number: {}", accountNumber);
+				};
+			}
+		}
+
+Inside this class, we are going to define a function that is responsible for accepting the message from the ms-message microservice.
+
+Step 5.3: Update the accounts table's schema by including a new column named 'communication_switch' with a Boolean data type
+
+		@Entity
+		@Table(name = "accounts")
+		@Getter
+		@Setter
+		@ToString
+		@AllArgsConstructor
+		@NoArgsConstructor
+		public class Account extends BaseEntity {
+
+			@Id
+			@Column(name = "account_number")
+			private Long accountNumber;
+			
+			@Column(name = "customer_id")
+			private Long customerId;
+			
+			@Column(name = "account_type")
+			private String accountType;
+			
+			@Column(name = "branch_addres")
+			private String branchAddress;
+			
+			@Column(name = "communication_switch")
+			private Boolean communicationSwitch;
+		}
+
+Step 5.4: Create a new abstract method named 'boolean updateCommunicationStatus(Long accountNumber)' inside 'IAccountService' and provide an implementation for the same inside 'AccountServiceImpl'
+
+	IAccountService
+
+		public interface IAccountService {
+
+			void createAccount(CustomerDto customerDto);
+			
+			CustomerDto fetchAccountByMobileNumber(String mobileNumber);
+			
+			boolean updateAccount(CustomerDto customerDto);
+			
+			boolean deleteAccount(String mobileNumber);
+			
+			boolean updateCommunicationStatus(Long accountNumber);
+
+		}
+
+
+	AccountServiceImpl
+
+		@Service
+		/**
+		 * If there is a single constructor, you do not have to Autowire the
+		 * dependencies, Spring will do it automatically because we have a single
+		 * constructor which is accepting the two dependencies as parameters
+		 */
+		@AllArgsConstructor
+		public class AccountServiceImpl implements IAccountService {
+
+			private static final Logger logger = LoggerFactory.getLogger(AccountServiceImpl.class);
+
+			private AccountRepository accountRepository;
+			private CustomerRepository customerRepository;
+			private final StreamBridge streamBridge;
+
+			@Override
+			public void createAccount(CustomerDto customerDto) {
+				Customer customer = CustomerMapper.mapToCustomer(customerDto, new Customer());
+				System.out.println("Customer Data: " + customer);
+				Optional<Customer> optionalCoustomer = customerRepository.findByMobileNumber(customerDto.getMobileNumber());
+				if (optionalCoustomer.isPresent()) {
+					throw new CustomerAlreadyExistsException(
+							"Customer already registered with given mobile number: " + customerDto.getMobileNumber());
+				} else {
+					System.out.println("Customer with mobile number " + customer.getMobileNumber() + "is not available");
+				}
+				Customer savedCustomer = customerRepository.save(customer);
+				Account savedAccount = accountRepository.save(createNewAccount(savedCustomer));
+				sendCommunication(savedAccount, savedCustomer);
+				logger.info("Account created successfully at {}", LocalDateTime.now());
+			}
+
+			private void sendCommunication(Account account, Customer customer) {
+				AccountsMessageDto accountsMessageDto = new AccountsMessageDto(account.getAccountNumber(), customer.getName(),
+						customer.getEmail(), customer.getMobileNumber());
+				logger.info("Sending communication messages for the details: {}", accountsMessageDto);
+				var result = streamBridge.send("sendCommunication-out-0", accountsMessageDto);
+				logger.info("Is the communication request successfully triggered? {}", result);
+			}
+
+			/**
+			 * 
+			 * @param customer
+			 * @return
+			 */
+			private Account createNewAccount(Customer customer) {
+				Account newAccount = new Account();
+
+				long randomAccountNumber = 1000000000L + new Random().nextInt(900000000);
+				newAccount.setAccountNumber(randomAccountNumber);
+
+				newAccount.setCustomerId(customer.getCustomerId());
+				newAccount.setAccountType(AccountConstant.SAVINGS);
+				newAccount.setBranchAddress(AccountConstant.ADDRESS);
+				return newAccount;
+			}
+
+			@Override
+			public CustomerDto fetchAccountByMobileNumber(String mobileNumber) {
+				Customer foundCustomer = customerRepository.findByMobileNumber(mobileNumber)
+						.orElseThrow(() -> new ResourceNotFoundException("Customer", "mobileNumber", mobileNumber));
+
+				Account foundAccount = accountRepository.findByCustomerId(foundCustomer.getCustomerId()).orElseThrow(
+						() -> new ResourceNotFoundException("Account", "customerId", foundCustomer.getCustomerId().toString()));
+
+				CustomerDto customerDto = CustomerMapper.mapToCustomerDto(foundCustomer, new CustomerDto());
+				AccountDto accountDto = AccountMapper.mapToAccountDto(foundAccount, new AccountDto());
+				customerDto.setAccountDto(accountDto);
+				return customerDto;
+
+			}
+
+			@Override
+			public boolean updateAccount(CustomerDto customerDto) {
+				boolean isUpdated = false;
+				AccountDto accountDto = customerDto.getAccountDto();
+				if (accountDto != null) {
+					Account foundAccount = accountRepository.findById(accountDto.getAccountNumber())
+							.orElseThrow(() -> new ResourceNotFoundException("Account", "accountNumber",
+									accountDto.getAccountNumber().toString()));
+
+					AccountMapper.mapToAccount(accountDto, foundAccount);
+					Account savedAccount = accountRepository.save(foundAccount);
+
+					Long customerId = savedAccount.getCustomerId();
+					Customer foundCustomer = customerRepository.findById(customerId)
+							.orElseThrow(() -> new ResourceNotFoundException("Customer", "customerId", customerId.toString()));
+
+					CustomerMapper.mapToCustomer(customerDto, foundCustomer);
+					customerRepository.save(foundCustomer);
+					isUpdated = true;
+
+				}
+				return isUpdated;
+			}
+
+			@Override
+			public boolean deleteAccount(String mobileNumber) {
+				Customer foundCustomer = customerRepository.findByMobileNumber(mobileNumber)
+						.orElseThrow(() -> new ResourceNotFoundException("Customer", "mobileNumber", mobileNumber));
+				accountRepository.deleteByCustomerId(foundCustomer.getCustomerId());
+				customerRepository.deleteById(foundCustomer.getCustomerId());
+				return true;
+			}
+
+			@Override
+			public boolean updateCommunicationStatus(Long accountNumber) {
+				boolean isUpdated = false;
+				if (accountNumber != null) {
+					Account foundAccount = accountRepository.findById(accountNumber).orElseThrow(
+							() -> new ResourceNotFoundException("Account", "accountNumber", accountNumber.toString()));
+					foundAccount.setCommunicationSwitch(true);
+					accountRepository.save(foundAccount);
+					isUpdated = true;
+					return isUpdated;
+				}
+				return isUpdated;
+			}
+
+		}
+
+Step 5.5: Update the implementation of 'updateCommunication' available inside the 'AccountsFunctions' class
+
+First, we need to make sure, we are injecting the 'IAccountService' dependency. We are going to annotate this method with the @Bean annotation so that the 'IAccountService' will be automatically injected or autowired by the Spring Framework at runtime, and we do not need to mention any @Autowired annotation.
+
+
+		@Configuration
+		public class AccountsFunctions {
+			private static final Logger logger = LoggerFactory.getLogger(AccountsFunctions.class);
+
+			@Bean
+			public Consumer<Long> updateCommunication(IAccountService accountService) {
+				return accountNumber -> {
+					logger.info("Updating communication status for account number: {}", accountNumber);
+					accountService.updateCommunicationStatus(accountNumber);
+				};
+			}
+		}
+
+
+Step 5.6: Add the following properties to application.properties of ms-accounts
+
+		# Function definition: single function named updateCommunication
+		spring.cloud.function.definition=updateCommunication
+		# updateCommunication-in-0 is the name of the input binding created by the function name. It is going to act as an input binding.
+		spring.cloud.stream.bindings.updateCommunication-in-0.destination=processed-communication
+		# Setting the consumer group to the application name to ensure that multiple instances of the same application share the same group.
+		spring.cloud.stream.bindings.updateCommunication-in-0.group=${spring.application.name}
+
+
+Step 5: Start the applications and verify the asynchronous communication between ms-accounts and ms-message with the help of RabbitMQ
+
+Make sure the RabbitMQ and KeyCloak containers are up and running
+
+Docker Logs:
+
+		PS C:\Users\LENOVO> docker ps
+		CONTAINER ID   IMAGE                              COMMAND                  CREATED       STATUS       PORTS                                                                                          NAMES
+		09df9c8f122e   rabbitmq:4-management              "docker-entrypoint.s…"   3 hours ago   Up 3 hours   0.0.0.0:5672->5672/tcp, [::]:5672->5672/tcp, 0.0.0.0:15672->15672/tcp, [::]:15672->15672/tcp   rabbitmq
+		e74f42741203   quay.io/keycloak/keycloak:26.4.7   "/opt/keycloak/bin/k…"   3 weeks ago   Up 3 hours   127.0.0.1:8050->8080/tcp                                                                       trusting_antonelli
+		PS C:\Users\LENOVO> docker start e74f42741203918e27bf65aee47c5cc74546dfc19ff3f1cbf144481b
+
+Start the application in the followin order: ms-config-server, ms-eurekaserver, ms-accounts, ms-message, and ms-gateway-server
+
+If we go to the 'Exchanges' tab of RabbitMQ Console now, we will see two exchanges
+
+'processed-communication' and 'send-communication'
+
+Please ignore the one named 'sendEmailsendSms-out-o', which is an orphan exchange that was created previously.
+
+If we go to the 'Queues and Streams' of RabbitMQ Console now, we will see two items
+
+'processed-communication.ms-accounts' and 'send-communication.ms-message'
+
+Invoke the 'Create Account API' of ms-accounts and verify the logs of ms-accounts and ms-message
+
+		curl --location 'http://localhost:8072/xyzbank/ms-accounts/api/accounts/create' \
+		--header 'Content-Type: application/json' \
+		--header 'Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI5WFhaNElNenlKeWNtSFhrajllaE9XTmJYQ3p1bW9aQ1c3TFdFbXFuRS1nIn0.eyJleHAiOjE3Njc5Mzk4NTUsImlhdCI6MTc2NzkzOTc5NSwianRpIjoidHJydGNjOjBkODIxNjI2LWI3NjUtYzZlZS00MDY2LTk1MjFiYWRkYTZhYSIsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6ODA1MC9yZWFsbXMvbWFzdGVyIiwiYXVkIjoiYWNjb3VudCIsInN1YiI6IjU5NTdiOWJiLTc5Y2EtNGMyZi1hNTg2LWUzMzcwMTFkY2NmZCIsInR5cCI6IkJlYXJlciIsImF6cCI6Inh5emJhbmstY2FsbGNlbnRlci1jYyIsImFjciI6IjEiLCJhbGxvd2VkLW9yaWdpbnMiOlsiLyoiXSwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbIkxPQU5TIiwiZGVmYXVsdC1yb2xlcy1tYXN0ZXIiLCJBQ0NPVU5UUyIsIm9mZmxpbmVfYWNjZXNzIiwidW1hX2F1dGhvcml6YXRpb24iLCJDQVJEUyJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFjY291bnQiOnsicm9sZXMiOlsibWFuYWdlLWFjY291bnQiLCJtYW5hZ2UtYWNjb3VudC1saW5rcyIsInZpZXctcHJvZmlsZSJdfX0sInNjb3BlIjoib3BlbmlkIGVtYWlsIHByb2ZpbGUiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsImNsaWVudEhvc3QiOiIxNzIuMTcuMC4xIiwicHJlZmVycmVkX3VzZXJuYW1lIjoic2VydmljZS1hY2NvdW50LXh5emJhbmstY2FsbGNlbnRlci1jYyIsImNsaWVudEFkZHJlc3MiOiIxNzIuMTcuMC4xIiwiY2xpZW50X2lkIjoieHl6YmFuay1jYWxsY2VudGVyLWNjIn0.M4xz3OqN9B1kWlP8RteoPLXLJBVftHGcM2rO_Qx1GodxLSfztnPCePr8q_aOb_kSFInKyEdAUqXP0Lj2lgPCUEGP3w_w7grjUO0cTRJHq5lJd4emX6ArETDjQNkWkJdkUuEdIYbhn8_HbXeofJjug8N2n3sMnz-OEHnOsA_VqbrpLBL3tvudY5gTStA5M3Ua-QJQ90WYOXf__802P4gNkvKUPPlYtp8phQ65aPgaHOUuBeJpg6jTwtZbds785MLPLrM-ANnCbvFROXgq29TY2G2gi2fgWCaplyllnfPtR8vEWJw5BLJFAq72KNIEo83m2SYHWtRurodHeYFTFVadnQ' \
+		--data-raw '{
+		    "name": "Dhandapani S",
+		    "email": "dhandapani.s@email.com",
+		    "mobileNumber": "4578905467"
+		}'
+
+
+		{
+		    "statusCode": "201 CREATED",
+		    "statusMessage": "Account created successfully"
+		}
+
+Logs ms-accounts:
+
+		Customer Data: Customer(customerId=null, name=Dhandapani S, email=dhandapani.s@email.com, mobileNumber=4578905467)
+		Hibernate: select c1_0.customer_id,c1_0.created_at,c1_0.created_by,c1_0.email,c1_0.mobile_numer,c1_0.name,c1_0.updated_at,c1_0.updated_by from customers c1_0 where c1_0.mobile_numer=?
+		Customer with mobile number 4578905467is not available
+		Hibernate: insert into customers (created_at,created_by,email,mobile_numer,name,customer_id) values (?,?,?,?,?,default)
+		Hibernate: select a1_0.account_number,a1_0.account_type,a1_0.branch_addres,a1_0.communication_switch,a1_0.created_at,a1_0.created_by,a1_0.customer_id,a1_0.updated_at,a1_0.updated_by from accounts a1_0 where a1_0.account_number=?
+		Hibernate: insert into accounts (account_type,branch_addres,communication_switch,created_at,created_by,customer_id,account_number) values (?,?,?,?,?,?,?)
+		[2m2026-01-09T12:09:08.758+05:30[0;39m [32m INFO [ms-accounts,,][0;39m [35m5256[0;39m [2m--- [ms-accounts] [nio-8080-exec-1] [0;39m[36mc.d.m.service.impl.AccountServiceImpl   [0;39m [2m:[0;39m Sending communication messages for the details: AccountsMessageDto[accountNumber=1513258821, name=Dhandapani S, email=dhandapani.s@email.com, mobileNumber=4578905467]
+		[2m2026-01-09T12:09:08.779+05:30[0;39m [32m INFO [ms-accounts,,][0;39m [35m5256[0;39m [2m--- [ms-accounts] [nio-8080-exec-1] [0;39m[36mo.s.c.s.m.DirectWithAttributesChannel   [0;39m [2m:[0;39m Channel 'ms-accounts.sendCommunication-out-0' has 1 subscriber(s).
+		[2m2026-01-09T12:09:08.811+05:30[0;39m [32m INFO [ms-accounts,,][0;39m [35m5256[0;39m [2m--- [ms-accounts] [nio-8080-exec-1] [0;39m[36mo.s.a.r.c.CachingConnectionFactory      [0;39m [2m:[0;39m Attempting to connect to: [localhost:5672]
+		[2m2026-01-09T12:09:08.824+05:30[0;39m [32m INFO [ms-accounts,,][0;39m [35m5256[0;39m [2m--- [ms-accounts] [nio-8080-exec-1] [0;39m[36mo.s.a.r.c.CachingConnectionFactory      [0;39m [2m:[0;39m Created new connection: rabbitConnectionFactory.publisher#3ce14c52:0/SimpleConnection@20da6e7d [delegate=amqp://guest@127.0.0.1:5672/, localPort=53607]
+		[2m2026-01-09T12:09:08.854+05:30[0;39m [32m INFO [ms-accounts,,][0;39m [35m5256[0;39m [2m--- [ms-accounts] [nio-8080-exec-1] [0;39m[36mc.d.m.service.impl.AccountServiceImpl   [0;39m [2m:[0;39m Is the communication request successfully triggered? true
+		[2m2026-01-09T12:09:08.854+05:30[0;39m [32m INFO [ms-accounts,,][0;39m [35m5256[0;39m [2m--- [ms-accounts] [nio-8080-exec-1] [0;39m[36mc.d.m.service.impl.AccountServiceImpl   [0;39m [2m:[0;39m Account created successfully at 2026-01-09T12:09:08.854520
+		[2m2026-01-09T12:09:09.020+05:30[0;39m [32m INFO [ms-accounts,,][0;39m [35m5256[0;39m [2m--- [ms-accounts] [n.ms-accounts-1] [0;39m[36mc.d.m.functions.AccountsFunctions       [0;39m [2m:[0;39m Updating communication status for account number: 1513258821
+		Hibernate: select a1_0.account_number,a1_0.account_type,a1_0.branch_addres,a1_0.communication_switch,a1_0.created_at,a1_0.created_by,a1_0.customer_id,a1_0.updated_at,a1_0.updated_by from accounts a1_0 where a1_0.account_number=?
+		Hibernate: select a1_0.account_number,a1_0.account_type,a1_0.branch_addres,a1_0.communication_switch,a1_0.created_at,a1_0.created_by,a1_0.customer_id,a1_0.updated_at,a1_0.updated_by from accounts a1_0 where a1_0.account_number=?
+		Hibernate: update accounts set account_type=?,branch_addres=?,communication_switch=?,customer_id=?,updated_at=?,updated_by=? where account_number=?
+
+Logs of ms-message:
+
+		[2m2026-01-09T12:07:42.909+05:30[0;39m [32m INFO[0;39m [35m13584[0;39m [2m--- [ms-message] [           main] [0;39m[36mo.s.a.r.c.CachingConnectionFactory      [0;39m [2m:[0;39m Attempting to connect to: [localhost:5672]
+		[2m2026-01-09T12:07:42.950+05:30[0;39m [32m INFO[0;39m [35m13584[0;39m [2m--- [ms-message] [           main] [0;39m[36mo.s.a.r.c.CachingConnectionFactory      [0;39m [2m:[0;39m Created new connection: rabbitConnectionFactory#6744707b:0/SimpleConnection@671da0f9 [delegate=amqp://guest@127.0.0.1:5672/, localPort=51358]
+		[2m2026-01-09T12:07:42.974+05:30[0;39m [32m INFO[0;39m [35m13584[0;39m [2m--- [ms-message] [           main] [0;39m[36mo.s.c.s.m.DirectWithAttributesChannel   [0;39m [2m:[0;39m Channel 'ms-message.sendEmailsendSms-out-0' has 1 subscriber(s).
+		[2m2026-01-09T12:07:42.988+05:30[0;39m [32m INFO[0;39m [35m13584[0;39m [2m--- [ms-message] [           main] [0;39m[36mc.s.b.r.p.RabbitExchangeQueueProvisioner[0;39m [2m:[0;39m declaring queue for inbound: send-communication.ms-message, bound to: send-communication
+		[2m2026-01-09T12:07:43.013+05:30[0;39m [32m INFO[0;39m [35m13584[0;39m [2m--- [ms-message] [           main] [0;39m[36mo.s.c.stream.binder.BinderErrorChannel  [0;39m [2m:[0;39m Channel 'rabbit-564508057.sendEmailsendSms-in-0.errors' has 1 subscriber(s).
+		[2m2026-01-09T12:07:43.013+05:30[0;39m [32m INFO[0;39m [35m13584[0;39m [2m--- [ms-message] [           main] [0;39m[36mo.s.c.stream.binder.BinderErrorChannel  [0;39m [2m:[0;39m Channel 'rabbit-564508057.sendEmailsendSms-in-0.errors' has 2 subscriber(s).
+		[2m2026-01-09T12:07:43.032+05:30[0;39m [32m INFO[0;39m [35m13584[0;39m [2m--- [ms-message] [           main] [0;39m[36mo.s.i.a.i.AmqpInboundChannelAdapter     [0;39m [2m:[0;39m started bean 'inbound.send-communication.ms-message'
+		[2m2026-01-09T12:07:43.142+05:30[0;39m [32m INFO[0;39m [35m13584[0;39m [2m--- [ms-message] [           main] [0;39m[36mo.s.boot.reactor.netty.NettyWebServer   [0;39m [2m:[0;39m Netty started on port 9010 (http)
+		[2m2026-01-09T12:07:43.159+05:30[0;39m [32m INFO[0;39m [35m13584[0;39m [2m--- [ms-message] [           main] [0;39m[36mc.d.ms_message.MsMessageApplication     [0;39m [2m:[0;39m Started MsMessageApplication in 1.992 seconds (process running for 2.589)
+		[2m2026-01-09T12:09:08.946+05:30[0;39m [32m INFO[0;39m [35m13584[0;39m [2m--- [ms-message] [on.ms-message-1] [0;39m[36mc.d.m.functions.MessageFunctions        [0;39m [2m:[0;39m Sending Email with the details: AccountsMessageDto[accountNumber=1513258821, name=Dhandapani S, email=dhandapani.s@email.com, mobileNumber=4578905467]
+		[2m2026-01-09T12:09:08.949+05:30[0;39m [32m INFO[0;39m [35m13584[0;39m [2m--- [ms-message] [on.ms-message-1] [0;39m[36mc.d.m.functions.MessageFunctions        [0;39m [2m:[0;39m Sending SMS with the details: AccountsMessageDto[accountNumber=1513258821, name=Dhandapani S, email=dhandapani.s@email.com, mobileNumber=4578905467]
+		[2m2026-01-09T12:09:08.966+05:30[0;39m [32m INFO[0;39m [35m13584[0;39m [2m--- [ms-message] [on.ms-message-1] [0;39m[36mo.s.a.r.c.CachingConnectionFactory      [0;39m [2m:[0;39m Attempting to connect to: [localhost:5672]
+		[2m2026-01-09T12:09:08.978+05:30[0;39m [32m INFO[0;39m [35m13584[0;39m [2m--- [ms-message] [on.ms-message-1] [0;39m[36mo.s.a.r.c.CachingConnectionFactory      [0;39m [2m:[0;39m Created new connection: rabbitConnectionFactory.publisher#6e7c8aeb:0/SimpleConnection@25f5ccd4 [delegate=amqp://guest@127.0.0.1:5672/, localPort=53608]
+
+
+>>> Demo of Asyn Communication or Event Streaming using Docker containers and Docker compose
+
+Step 1: Generate new images with the tag 0.0.8
+
+PS D:\STS_WS\Event-Driven-Microservices>ms-config-server> mvn compile jib:dockerBuild
+PS D:\STS_WS\Event-Driven-Microservices>ms-eurekaserver> mvn compile jib:dockerBuild
+PS D:\STS_WS\Event-Driven-Microservices>ms-accounts> mvn compile jib:dockerBuild
+PS D:\STS_WS\Event-Driven-Microservices>ms-loans> mvn compile jib:dockerBuild
+PS D:\STS_WS\Event-Driven-Microservices>ms-cards> mvn compile jib:dockerBuild
+PS D:\STS_WS\Event-Driven-Microservices>ms-gateway-server> mvn compile jib:dockerBuild
+PS D:\STS_WS\Event-Driven-Microservices>ms-message> mvn compile jib:dockerBuild
+
+Step 2: Push the latest images to Docker Hub
+
+docker push docker.io/dhandapaniks/ms-config-server:0.0.8
+docker push docker.io/dhandapaniks/ms-eurekaserver:0.0.8
+docker push docker.io/dhandapaniks/ms-accounts:0.0.8
+docker push docker.io/dhandapaniks/ms-loans:0.0.8
+docker push docker.io/dhandapaniks/ms-cards:0.0.8
+docker push docker.io/dhandapaniks/ms-gateway-server:0.0.8
+docker push docker.io/dhandapaniks/ms-message:0.0.8
+
+Step 3: Make the following changes to the docker-compose/prod/docker-compose.yml file
+
+Step 3.1: Add rabbitmq to services
+
+		  rabbitmq:
+		    image: rabbitmq:4.0-management
+		    hostname: rabbitmq
+		    ports:
+		      - "5672:5672"
+		      - "15672:15672"
+		    healthcheck:
+		      test: rabbitmq-diagnostics check_port_connectivity
+		      interval: 10s
+		      timeout: 5s
+		      retries: 10
+		      start_period: 5s
+		    extends:
+		      file: common-config.yml
+		      service: network-deploy-service
+
+Step 3.2: Change the tag names from 0.0.7 to 0.0.8 
+
+Step 3.3: Update the ms-accounts service 
+
+- Update the ms-accounts service to depend on rabbitmq's health
+- Add an environment variable: SPRING_RABBITMQ_HOST: "rabbitmq"
+
+For the other properties of RabbitMQ, like username, password, and port number, the values we have defined inside the application.properties will be used
+
+Step 3.4: Add a new service named 'ms-message' for the message service that we created
+
+	  ms-message:
+	    image: "dhandapaniks/ms-message:0.0.8"
+	    container_name: "ms-message"
+	    depends_on:
+	      rabbitmq:
+	        condition: service_healthy
+	    environment:
+	      SPRING_RABBITMQ_HOST: "rabbitmq"
+	    extends:
+	      file: common-config.yml
+	      service: network-deploy-service    
+
+
+Step 4: Start the services for PROD profile using the following Docker command
+
+docker compose up -d
+
+		PS D:\STS_WS\Event-Driven-Microservices\docker-compose\prod> docker compose up -d
+		[+] Running 11/11
+		 ✔ rabbitmq Pulled                                                                                                             15.0s
+		   ✔ 771dfa5f59e9 Pull complete                                                                                                 2.1s
+		   ✔ 8ae809345f87 Pull complete                                                                                                 0.7s
+		   ✔ b836eeb25537 Pull complete                                                                                                 1.5s
+		   ✔ 35f4b3b5f17b Pull complete                                                                                                 1.5s
+		   ✔ bb01140b68e0 Pull complete                                                                                                 1.3s
+		   ✔ 25b5559d1a9e Pull complete                                                                                                 1.5s
+		   ✔ 5c8f62a683bb Pull complete                                                                                                 9.3s
+		   ✔ 79ef0dc944ac Pull complete                                                                                                 9.1s
+		   ✔ 28e01d75b69c Pull complete                                                                                                 9.8s
+		   ✔ 200fc5e5e63f Pull complete                                                                                                 9.2s
+		[+] Running 19/19
+		 ✔ Network prod_dhandapaniks-xyzbank-msntwrk  Created                                                                           0.1s
+		 ✔ Container prometheus                       Started                                                                           2.2s
+		 ✔ Container ms-config-server                 Healthy                                                                          55.2s
+		 ✔ Container prod-rabbitmq-1                  Healthy                                                                          55.2s
+		 ✔ Container tempo                            Started                                                                           2.1s
+		 ✔ Container keycloak                         Started                                                                           2.0s
+		 ✔ Container prod-minio-1                     Started                                                                           2.1s
+		 ✔ Container prod-read-1                      Started                                                                           2.4s
+		 ✔ Container prod-write-1                     Started                                                                           2.6s
+		 ✔ Container ms-eurekaserver                  Healthy                                                                         106.4s
+		 ✔ Container ms-message                       Started                                                                          40.3s
+		 ✔ Container ms-loans                         Healthy                                                                         179.6s
+		 ✔ Container ms-accounts                      Healthy                                                                         189.5s
+		 ✔ Container ms-cards                         Healthy                                                                         179.6s
+		 ✔ Container prod-gateway-1                   Started                                                                           2.8s
+		 ✔ Container ms-gateway-server                Started                                                                         189.6s
+		 ✔ Container prod-grafana-1                   Started                                                                           3.3s
+		 ✔ Container prod-backend-1                   Started                                                                           3.4s
+		 ✔ Container prod-alloy-1                     Started    
+
+Access RabbitMQ at http://localhost:15672/
+
+Access KeyCloak at http://127.0.0.1:8050/
+
+Create the required roles, client and assign the roles to the client, finally copy the Client ID and Secret and use it while making API Calls.
+
+Call 'Create Account' API
+
+		curl --location 'http://localhost:8072/xyzbank/ms-accounts/api/accounts/create' \
+		--header 'Content-Type: application/json' \
+		--header 'Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJnd2NrM3hrVEU1Zzh2ZnpReWEzWE8wV2JOQk9zd3dfVXdwLWF1TzJIZE5vIn0.eyJleHAiOjE3NjgxMjk4ODIsImlhdCI6MTc2ODEyOTgyMiwianRpIjoidHJydGNjOjA2NTcyYzYwLWI2ZDgtMjc2Zi0zMzNkLTQ5Njk0OWI1MTJiMCIsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6ODA1MC9yZWFsbXMvbWFzdGVyIiwiYXVkIjoiYWNjb3VudCIsInN1YiI6IjFmZjMzOGVlLTRmODUtNDkxNC05YzU2LWYyODc3ODJjZGUyZSIsInR5cCI6IkJlYXJlciIsImF6cCI6Inh5emJhbmstY2FsbGNlbnRlci1jYyIsImFjciI6IjEiLCJhbGxvd2VkLW9yaWdpbnMiOlsiLyoiXSwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbIkxPQU5TIiwiZGVmYXVsdC1yb2xlcy1tYXN0ZXIiLCJBQ0NPVU5UUyIsIm9mZmxpbmVfYWNjZXNzIiwidW1hX2F1dGhvcml6YXRpb24iLCJDQVJEUyJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFjY291bnQiOnsicm9sZXMiOlsibWFuYWdlLWFjY291bnQiLCJtYW5hZ2UtYWNjb3VudC1saW5rcyIsInZpZXctcHJvZmlsZSJdfX0sInNjb3BlIjoib3BlbmlkIHByb2ZpbGUgZW1haWwiLCJjbGllbnRIb3N0IjoiMTcyLjE4LjAuMSIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwicHJlZmVycmVkX3VzZXJuYW1lIjoic2VydmljZS1hY2NvdW50LXh5emJhbmstY2FsbGNlbnRlci1jYyIsImNsaWVudEFkZHJlc3MiOiIxNzIuMTguMC4xIiwiY2xpZW50X2lkIjoieHl6YmFuay1jYWxsY2VudGVyLWNjIn0.rzJvED0r2mC-ONLxUB3MHZ7p0NFpn43mL2N1acGOmmh_MYuMDqwyys5ObWgTd33fZIQ3o_WkxE1-YxdqzNyhG-CPJDaOEkMTj0tQHTNPtG6_AKtSjzd746qr9C87xd7wYfViYRjp0cMCVPaMPBf9jmij_vPzXPsjJRSv48qFxravbFHXytI-uyqnUzVmc39I-qUo10ZWMg2YYN_KVyIRZ6lBgYQE5zxMf2RM75lROPMGyBgUoS7E0mm6HFSP1tfw3yKc9PM1mPoEPVHnZt0VeDQmN6hgeJwUVpI9UO5mO8Ndumhzv9Zkjed7RnD1950jm98s8xwzkNRt1isaYSn9JQ' \
+		--data-raw '{
+		    "name": "Dhandapani S",
+		    "email": "dhandapani.s@email.com",
+		    "mobileNumber": "4578905467"
+		}'
+
+		{
+		    "statusCode": "201 CREATED",
+		    "statusMessage": "Account created successfully"
+		}
+
+Logs of ms-accounts
+
+		Customer Data: Customer(customerId=null, name=Dhandapani S, email=dhandapani.s@email.com, mobileNumber=4578905467)
+
+		Hibernate: select c1_0.customer_id,c1_0.created_at,c1_0.created_by,c1_0.email,c1_0.mobile_numer,c1_0.name,c1_0.updated_at,c1_0.updated_by from customers c1_0 where c1_0.mobile_numer=?
+
+		Customer with mobile number 4578905467is not available
+
+		Hibernate: insert into customers (created_at,created_by,email,mobile_numer,name,customer_id) values (?,?,?,?,?,default)
+
+		Hibernate: select a1_0.account_number,a1_0.account_type,a1_0.branch_addres,a1_0.communication_switch,a1_0.created_at,a1_0.created_by,a1_0.customer_id,a1_0.updated_at,a1_0.updated_by from accounts a1_0 where a1_0.account_number=?
+
+		Hibernate: insert into accounts (account_type,branch_addres,communication_switch,created_at,created_by,customer_id,account_number) values (?,?,?,?,?,?,?)
+
+		2026-01-11T11:10:24.799Z  INFO [ms-accounts,e9c4d86806932d9c88fd1dd2a4bad425,287fd867e52b8466] 1 --- [ms-accounts] [nio-8080-exec-3] c.d.m.service.impl.AccountServiceImpl    : Sending communication messages for the details: AccountsMessageDto[accountNumber=1597603978, name=Dhandapani S, email=dhandapani.s@email.com, mobileNumber=4578905467]
+
+		2026-01-11T11:10:24.838Z  INFO [ms-accounts,e9c4d86806932d9c88fd1dd2a4bad425,287fd867e52b8466] 1 --- [ms-accounts] [nio-8080-exec-3] o.s.c.s.m.DirectWithAttributesChannel    : Channel 'ms-accounts.sendCommunication-out-0' has 1 subscriber(s).
+
+		2026-01-11T11:10:24.874Z  INFO [ms-accounts,e9c4d86806932d9c88fd1dd2a4bad425,287fd867e52b8466] 1 --- [ms-accounts] [nio-8080-exec-3] o.s.a.r.c.CachingConnectionFactory       : Attempting to connect to: [rabbitmq:5672]
+
+		2026-01-11T11:10:24.885Z  INFO [ms-accounts,e9c4d86806932d9c88fd1dd2a4bad425,287fd867e52b8466] 1 --- [ms-accounts] [nio-8080-exec-3] o.s.a.r.c.CachingConnectionFactory       : Created new connection: rabbitConnectionFactory.publisher#770f0104:0/SimpleConnection@382dad37 [delegate=amqp://guest@172.18.0.3:5672/, localPort=45476]
+
+		2026-01-11T11:10:24.909Z  INFO [ms-accounts,e9c4d86806932d9c88fd1dd2a4bad425,287fd867e52b8466] 1 --- [ms-accounts] [nio-8080-exec-3] c.d.m.service.impl.AccountServiceImpl    : Is the communication request successfully triggered? true
+
+		2026-01-11T11:10:24.909Z  INFO [ms-accounts,e9c4d86806932d9c88fd1dd2a4bad425,287fd867e52b8466] 1 --- [ms-accounts] [nio-8080-exec-3] c.d.m.service.impl.AccountServiceImpl    : Account created successfully at 2026-01-11T11:10:24.909702561
+
+		2026-01-11T11:10:25.457Z  INFO [ms-accounts,e9c4d86806932d9c88fd1dd2a4bad425,b0715fade7e36cde] 1 --- [ms-accounts] [n.ms-accounts-1] c.d.m.functions.AccountsFunctions        : Updating communication status for account number: 1597603978
+
+		Hibernate: select a1_0.account_number,a1_0.account_type,a1_0.branch_addres,a1_0.communication_switch,a1_0.created_at,a1_0.created_by,a1_0.customer_id,a1_0.updated_at,a1_0.updated_by from accounts a1_0 where a1_0.account_number=?
+
+		Hibernate: select a1_0.account_number,a1_0.account_type,a1_0.branch_addres,a1_0.communication_switch,a1_0.created_at,a1_0.created_by,a1_0.customer_id,a1_0.updated_at,a1_0.updated_by from accounts a1_0 where a1_0.account_number=?
+
+		Hibernate: update accounts set account_type=?,branch_addres=?,communication_switch=?,customer_id=?,updated_at=?,updated_by=? where account_number=?
+
+Logs of ms-message
+
+		2026-01-11T10:48:53.134Z  INFO 1 --- [ms-message] [           main] c.d.ms_message.MsMessageApplication      : Started MsMessageApplication in 11.001 seconds (process running for 12.621)
+
+		2026-01-11T11:10:25.340Z  INFO 1 --- [ms-message] [on.ms-message-1] c.d.m.functions.MessageFunctions         : Sending Email with the details: AccountsMessageDto[accountNumber=1597603978, name=Dhandapani S, email=dhandapani.s@email.com, mobileNumber=4578905467]
+
+		2026-01-11T11:10:25.356Z  INFO 1 --- [ms-message] [on.ms-message-1] c.d.m.functions.MessageFunctions         : Sending SMS with the details: AccountsMessageDto[accountNumber=1597603978, name=Dhandapani S, email=dhandapani.s@email.com, mobileNumber=4578905467]
+
+		2026-01-11T11:10:25.383Z  INFO 1 --- [ms-message] [on.ms-message-1] o.s.a.r.c.CachingConnectionFactory       : Attempting to connect to: [rabbitmq:5672]
+
+		2026-01-11T11:10:25.396Z  INFO 1 --- [ms-message] [on.ms-message-1] o.s.a.r.c.CachingConnectionFactory       : Created new connection: rabbitConnectionFactory.publisher#64501c9e:0/SimpleConnection@778da50a [delegate=amqp://guest@172.18.0.3:5672/, localPort=51548]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
