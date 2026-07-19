@@ -1,0 +1,12 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: admin-user # Name of the ClusterRoleBinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole # What is the ClusterRole you want to bind
+  name: cluster-admin # Name of the Role, whoever has this role can become the admin of the cluster To which User or which ServiceAccount you want to bind
+subjects: # Under subjects, we can define any no of users or service accounts
+- kind: ServiceAccount # Kind of User
+  name: admin-user # Name of the service account name
+  namespace: kubernetes-dashboard
