@@ -1,0 +1,1514 @@
+****************************************
+Container Orchestration using Kubernetes
+****************************************
+
+Challenges related to Container Orchestration
+---------------------------------------------
+---------------------------------------------
+
+Sometimes we may have more than 100 microservices, which means we may have more than 100 different containers running on our production servers. When we have such a large number of containers, we need a component to handle container orchestration. Just as a conductor in a musical orchestra coordinates many musicians, we need a component that can control our containers based on our requirements.
+
+Challenge 1: How are we going to automate the deployments, rollouts and rollbacks?
+----------------------------------------------------------------------------------
+
+How do we automate the deployment of containers into a complex cluster environment and perform rollouts of new versions of the containers without downtime, along with an option for automatic rollback in case of any issues?
+
+What is rollout and rollback?
+
+Whenever we try to make changes or build a new version of our microservices, we need to push them or deploy them to a production server. When we try to do that deployment, larger organizations cannot afford downtime. So in such scenarios, they will go with the option of rollout. As part of this rollout, they replace the containers one by one with the latest Docker image. 
+
+For the ms-accounts microservice, we have three Docker containers running in production. With the help of this rollout, we can first create a new container with the latest Docker image. Once the new container is available, we can then terminate the previously running containers. This will avoid any downtime that organizations may face during the deployment. 
+
+On a similar line, think of when we roll out a new feature or a new Docker image into our containers, and we face an issue, or a bug is identified in the production server. In such scenarios, we should also have the flexibility of automatic rollback to the previously running version of the Docker image in case of any issues. 
+
+Challenge 2: How are we going to make our microservices self-healing capable?
+-----------------------------------------------------------------------------
+
+How do we automatically restart containers that fail, replace containers, kill containers that don't respond to our user-defined health check, and do not advertise them to clients until they are ready to serve?
+
+That means if one of the microservice containers is not responding properly or it is responding very slowly, we need to have someone to regularly perform the health check on these running containers and take an automatic decision by killing the containers that are not responding properly and replacing them with new containers.
+
+Challenge 3: How are we going to make our microservices auto-scalable?
+----------------------------------------------------------------------
+
+How do we monitor our services and scale them automatically based on metrics like CPU Utilization, etc?
+
+So what is scaling? When are we seeing the increase in traffic that is coming towards our application? We can try to onboard a larger number of containers or more number of services, so that is vertical scaling, but doing that manually for each and every microservice is going to be a bsuper super impossible task. So that is why we need to look for options on how to do auto scaling of our microservices based upon the CUP utilization or other metrics of the running containers.
+
+We should be able to automatically make a decision whether to scale up or scale down the running containers. 
+
+Example: Let's take an example of Netflix, usually there will be a lot of traffic to Netflix on Friday night, on the Staturday and Sunday. So during these days the Netflix should automatically scale their number of microservice instances or applications so that it can stream the content to its customers without any issues. And similarly, there can be a sudden spike in traffic sometimes, maybe due to some long weekend or due to some holiday in the middle of the week. So, in all such scenarios, Netflix should be able to automatically handle that by increasing the number of microservices at runtime with the help of auto scaling. 
+
+Very similarly, we should also be able to perform auto scaling on our microservices.
+
+Notes from ChatGPT
+------------------
+------------------
+
+Challenges Related to Container Orchestration
+---------------------------------------------
+---------------------------------------------
+
+In a real-world microservices architecture, we may have hundreds of microservices, which means hundreds of containers running in production.
+
+Managing such a large number of containers manually is not possible. So we need a container orchestration component to manage them efficiently.
+
+Just like a music conductor controls and coordinates multiple musicians, a container orchestration system controls containers based on our requirements such as deployment, health, scaling, and availability.
+
+Challenge 1: Automating Deployments, Rollouts, and Rollbacks
+------------------------------------------------------------
+
+One of the major challenges is how to automate deployments in a complex cluster environment without downtime, and also support automatic rollback if something goes wrong.
+
+>> What is Deployment?
+
+Deployment means pushing a new version of a microservice (Docker image) to the production environment.
+
+>> What is Rollout?
+
+In large organizations, downtime is not acceptable. So instead of stopping all containers and starting new ones, we use rolling deployment (rollout).
+
+In rollout:
+
+- Containers are replaced one by one
+- New containers are started with the latest Docker image
+- Old containers are terminated only after the new ones are ready
+
+Example:
+
+Assume the ms-accounts microservice has 3 containers running in production.
+
+- A new container with the latest image is started
+- Once it is healthy, one old container is stopped
+- This process continues until all containers are upgraded
+- This approach ensures zero downtime during deployment.
+
+>> What is Rollback?
+
+Sometimes after deploying a new version:
+
+- A bug is detected
+- Performance issues occur
+- Production errors are reported
+
+In such cases, we should be able to automatically rollback to the previous stable version of the Docker image.
+
+Rollback ensures:
+
+- Faster recovery
+- Minimal business impact
+- High system reliability
+
+Challenge 2: Making Microservices Self-Healing
+----------------------------------------------
+
+Microservices should be self-healing, meaning they can recover from failures automatically without manual intervention.
+
+Self-healing includes:
+
+- Automatically restarting failed containers
+- Replacing crashed containers
+- Killing containers that fail health checks
+- Not routing traffic to containers until they are fully ready
+
+If a container:
+
+- Stops responding
+- Becomes very slow
+- Fails a user-defined health check
+
+Then the system should:
+
+- Continuously perform health checks
+- Automatically terminate unhealthy containers
+- Create new containers to replace them
+- Ensure only healthy containers serve user requests
+
+This improves system stability and availability.
+
+Challenge 3: Making Microservices Auto-Scalable
+-----------------------------------------------
+
+Traffic to applications is not constant. It can increase or decrease based on time, usage, or events.
+
+Auto-scaling helps microservices handle traffic changes automatically.
+
+Auto-scaling involves:
+
+- Monitoring metrics like CPU utilization, memory usage, or request count
+- Automatically scaling up or scaling down containers based on load
+- Manually scaling containers for each microservice is not practical. So we need an automated mechanism.
+- In microservices, scaling is usually horizontal scaling (adding or removing containers), not vertical scaling.
+
+Example:
+
+Netflix experiences high traffic on:
+
+- Friday nights
+- Saturdays and Sundays
+- Holidays and long weekends
+
+During these times:
+
+- Netflix automatically adds more microservice instances
+- This ensures smooth streaming for users
+
+When traffic reduces:
+
+- Extra instances are removed
+- Resources are saved
+
+Similarly, our microservices should:
+
+- Scale up during high traffic
+- Scale down during low traffic
+- Handle sudden traffic spikes automatically
+
+>> Summary
+
+- Container orchestration is required to manage large numbers of containers
+- Rollouts ensure zero-downtime deployments
+- Rollbacks provide safety during failed deployments
+- Self-healing ensures high availability
+- Auto-scaling ensures performance and cost efficiency
+
+Kubernetes
+----------
+----------
+
+Kubernetes is an open-source container orchestration platform that automates the deployment, scaling, and management of containerized applications. It was originally developed by Google and is now maintained by the Cloud Native Computing Foundation (CNCF).
+
+Google open-sourced the Kubernetes project in 2014. Kubernetes combines over 15 years of Google's experience running production workloads at scale with best-of-breed ideas and practices from the community.
+
+Kubernetes provides you with a framework to run distributed systems resiliently. It takes care of scaling and failover for your application, provides deployment patterns, and more. It provides you with:
+
+- Service discovery and load balancing
+- Container and storage orchestration
+- Automated rollouts and rollbacks
+- Self-healing
+- Secret and configuration management
+
+When we were discussing about Eureka Server, we understood that with the help of Eureka Server, we do client-side load balancing, whereas with the help of Kubernetes, we can get rid of Eureka Server, and we can hand over the load balancing to Kubernetes.
+
+The name Kubernetes originates from Greek, meaning helmsman or pilot. K8s as an abbreviation, results from counting the eight letters between the K and S.
+
+From ChatGPT
+------------
+
+>> What is Kubernetes?
+
+Kubernetes is an open-source container orchestration platform that automates the deployment, scaling, and management of containerized applications.
+
+Kubernetes was originally developed by Google and is now maintained by the Cloud Native Computing Foundation (CNCF).
+
+Google open-sourced Kubernetes in 2014. It is built using:
+
+- Over 15 years of Google’s experience in running large-scale production workloads
+- Best practices and ideas contributed by the open-source community
+
+>> What Kubernetes Does?
+
+Kubernetes provides a framework to run distributed systems in a resilient and reliable way.
+
+It automatically handles:
+
+- Scaling of applications
+- Failover when containers fail
+- Standard deployment patterns
+- Day-to-day operational complexity of containerized systems
+
+>> Key Features of Kubernetes
+
+Kubernetes provides:
+
+- Service discovery and load balancing
+- Container and storage orchestration
+- Automated rollouts and rollbacks
+- Self-healing (restart, replace, and reschedule failed containers)
+- Secret and configuration management
+
+>> Kubernetes vs Eureka Server
+
+When we discussed Eureka Server, we learned that:
+
+- Eureka performs client-side load balancing
+
+With Kubernetes:
+
+- We do not need Eureka Server
+- Kubernetes provides built-in service discovery and load balancing
+- Load balancing is handled by the platform itself, not by the application
+- This reduces complexity and removes the need for additional service discovery tools.
+
+Origin of the Name Kubernetes
+
+- The word Kubernetes comes from Greek, meaning helmsman or pilot (the person who steers a ship).
+
+- The abbreviation K8s comes from: K + 8 letters + s
+
+
+Traditional VMs vs Docker vs Kubernetes
+---------------------------------------
+
+>>> Traditional Virtual Machines (VMs)
+
+In the traditional VM approach:
+
+- We use a hypervisor (like VMware or VirtualBox)
+
+Each VM has:
+
+- Its own OS
+- Application
+- Required libraries and dependencies
+
+Problems with VMs:
+
+- Heavy and slow to start
+- High resource usage because each VM runs a full OS
+- Scaling is manual and slow
+- Managing many VMs becomes complex
+- VMs are good for strong isolation, but not ideal for microservices.
+
+>>> Docker (Containers)
+
+Docker introduced containers, which are lightweight compared to VMs.
+
+In Docker:
+
+- Containers share the host OS
+
+Each container has:
+
+- Application
+- Required libraries
+- No separate OS per container
+
+Advantages of Docker:
+
+- Fast startup
+- Less resource usage
+- Easy to package and ship applications
+- Works well for microservices
+
+Limitations of Docker alone:
+
+No built-in:
+
+- Auto-scaling
+- Self-healing
+- Load balancing
+
+Managing containers manually becomes difficult at scale
+
+Docker solves packaging, but not production management.
+
+>>> Kubernetes
+
+Kubernetes is a container orchestration platform.
+
+Kubernetes manages Docker containers (or other containers) at scale.
+
+What Kubernetes provides:
+
+- Automated deployments
+- Rolling updates and rollbacks
+- Self-healing (restart failed containers)
+- Auto-scaling based on CPU or other metrics
+- Service discovery and load balancing
+- Configuration and secret management
+
+Kubernetes is used when:
+
+- We have many containers
+- We want high availability
+- We need zero-downtime deployments
+
+>>> Comparison Table (Very Important for Interviews)
+
+--------------------------------------------------------------------------------------------------------------
+Feature                         | Traditional VMs              | Docker               | Kubernetes
+--------------------------------------------------------------------------------------------------------------
+Unit                            | Virtual Machine              | Container            | Cluster of containers
+--------------------------------------------------------------------------------------------------------------
+OS per application              | Yes                          | No                   | No
+--------------------------------------------------------------------------------------------------------------
+Startup time                    | Minutes                      | Seconds              | Seconds
+--------------------------------------------------------------------------------------------------------------
+Resource usage                  | High                         | Low                  | Optimized / efficient
+--------------------------------------------------------------------------------------------------------------
+Scaling                         | Manual                       | Manual               | Automatic
+--------------------------------------------------------------------------------------------------------------
+Self-healing                    | No                           | No                   | Yes
+--------------------------------------------------------------------------------------------------------------
+Load balancing                  | External tools required      | External tools       | Built-in
+--------------------------------------------------------------------------------------------------------------
+Rollout and rollback            | Manual                       | Manual               | Automatic
+--------------------------------------------------------------------------------------------------------------
+Best use case                   | Legacy / monolithic apps     | Microservices        | Large-scale microservices
+--------------------------------------------------------------------------------------------------------------
+
+*********************************************
+Kubernetes Architecture – Couse Notes - START
+*********************************************
+
+>> What is a Cluster?
+
+A cluster is a group of physical or virtual machines that work together to deliver applications reliably.
+In a Kubernetes cluster, multiple machines cooperate to ensure high availability, scalability, and self-healing of microservices.
+
+>> Why Not Docker Compose?
+
+Docker Compose is designed for single-host deployments.
+In real-world production systems, applications may consist of hundreds of microservices that need to run across multiple servers.
+
+Docker Compose lacks:
+
+- Multi-node scheduling
+- Self-healing across nodes
+- Rolling updates
+- Fault tolerance
+
+Kubernetes provides these features and acts as a container orchestration platform.
+
+We can interact with Kubernetes using:
+
+- kubectl CLI (primary and official tool)
+- Optional web dashboards (e.g., Kubernetes Dashboard, Lens)
+
+>> Kubernetes Cluster
+
+A Kubernetes cluster consists of two types of nodes:
+
+1. Control Plane (Master Node)
+
+Responsible for:
+
+- Managing cluster state
+- Scheduling workloads
+- Maintaining desired state
+
+The master node is responsible for managing an entire cluster. It monitors the health check for all the nodes in the cluster, stores members' information regarding different nodes, plans the containers that are scheduled to certain worker nodes, monitors containers and nodes, etc. So when a worker node fails, the master moves that workload from the failed node to another healthy worker node. 
+
+Below are the details of the four basic components present inside the control plane:
+
+> API Server: The API Server is the primary interface for interacting with the Kubernetes cluster. It exposes the Kubernetes API, which allows users and other components to communicate with the cluster. All administrative operations and control commands are sent to the API server, which then processes and validates them.
+
+> Scheduler: The scheduler is responsible for placing Pods onto available nodes in the cluster. It takes into account factors like resource requirements, affinity, anti-affinity, and other constraints to make intelligent decisions about which node to assign a Pod to. The scheduler continuously monitors the cluster and ensures that Pods are distributed optimally.
+
+> Controller Manager: The controller manager maintains the cluster. It handles node failures, replicates components, maintains the correct number of pods, etc. It constantly tries to keep the system in the desired state by comparing it with the current state of the system.
+
+> etcd: etcd is a distributed key-value store that serves as the cluster's primary data store. It stores the configuration data and the desired state of the system, including information about Pods, Services, ReplicationControllers, and more. The API Server interacts with etcd to read and write cluster data. 
+
+2. Worker Nodes
+
+Responsible for:
+
+- Running application Pods
+- Executing container workloads
+- Serving traffic routed to Pods
+- Interacting with the Cluster
+
+A worker node is a physical server or a virtual machine running either on-premises or in the cloud.
+Any machine capable of running a CRI-compatible container runtime can function as a worker node.
+
+Worker nodes:
+
+- Provide compute, storage, and networking resources
+- Run application workloads in the form of Pods
+- Perform the heavy-lifting in a Kubernetes cluster
+- Workloads are scheduled to worker nodes by the Kubernetes control plane, enabling fault tolerance, replication, and scalability across the cluster.
+
+> Pods: Pods are the smallest deployable unit in Kubernetes, just as containers are the smallest deployable unit in Docker.
+
+A Pod:
+
+- Consists of one or more containers
+- Provides a shared network namespace and storage
+- Represents a single logical application instance
+- Pods are not virtual machines.
+- They are lightweight abstractions used to group tightly coupled containers.
+- Each time a Pod is created, it receives a unique IP address from the cluster’s Pod networking solution.
+
+> Sidecar Pattern
+
+Sometimes an application container needs a helper container (logging, monitoring, proxy, etc.).
+
+- Such helper containers run alongside the main container in the same Pod.
+- This design is called the sidecar pattern.
+
+Components of a Worker Node
+
+> Kubelet: Kubelet is an agent that runs on each worker node and communicates with the control plane. It receives Pod specifications and ensures that the containers defined in those Pods are running and healthy.
+
+Responsibilities include:
+
+- Starting and stopping containers
+- Monitoring container health
+- Reporting node and Pod status to the API Server
+
+> kube-proxy: kube-proxy runs on each node and implements part of the Kubernetes Service abstraction.
+
+It:
+
+- Maintains networking rules using iptables or IPVS
+- Routes Service traffic to the appropriate Pod IPs
+- Enables internal cluster communication
+- kube-proxy does not expose applications externally by itself.
+
+kube-proxy is responsible for service networking inside the cluster.
+
+- It implements Kubernetes Services
+- Routes traffic to the correct Pod IPs
+- Uses iptables or IPVS rules
+- kube-proxy does not expose applications to the outside world directly.
+
+External exposure is done by:
+
+- Service type LoadBalancer
+- NodePort
+- Ingress Controller
+
+> Container Runtime: The container runtime is responsible for pulling images and running containers on a worker node.
+
+Kubernetes interacts with the runtime via the Container Runtime Interface (CRI).
+
+Common runtimes include:
+
+- containerd
+- CRI-O
+
+Docker is no longer used directly by Kubernetes.
+
+*******************************************
+Kubernetes Architecture – Couse Notes - END
+*******************************************
+
+************************************************************
+Kubernetes Architecture – Revised Notes from ChatGPT - START
+************************************************************
+
+>>> Kubernetes Control Plane (Master Node)
+------------------------------------------
+------------------------------------------
+
+The Control Plane is responsible for managing the cluster and maintaining its desired state.
+It consists of the following components:
+
+- API Server
+- etcd
+- Controller Manager
+- Scheduler
+
+>> API Server
+-------------
+
+The API Server is the central communication hub of Kubernetes.
+All cluster interactions go through the API Server:
+
+- kubectl
+- Controller Manager
+- Scheduler
+- Kubelets on worker nodes
+
+It:
+
+- Validates and processes REST requests
+- Persists cluster state in etcd
+- Acts as the single source of interaction for all components
+
+>> etcd
+-------
+
+etcd is a distributed key-value store and the source of truth for the Kubernetes cluster.
+
+It stores:
+
+-Desired state (Pod specs, Deployment replicas, configs)
+- Cluster configuration
+- Metadata
+- Secrets and ConfigMaps
+
+Example stored state:
+
+A Deployment requires 2 replicas
+Image: simplybyte/calculator
+Container port: 8080
+
+>> Controller Manager
+---------------------
+
+The Controller Manager runs multiple controllers that continuously ensure:
+
+Desired State == Actual State
+
+Examples of controllers:
+
+- Deployment Controller
+- ReplicaSet Controller
+- Node Controller
+- Endpoint Controller
+
+Desired State:- What the user declares (e.g., replicas = 2)
+Actual State:- What is currently running in the cluster
+
+- If a mismatch is detected, the controller takes corrective action via the API Server.
+- Controllers manage Kubernetes resources (Pods, Nodes, ReplicaSets) — not containers directly.
+
+>> Scheduler
+------------
+
+The Scheduler decides which worker node a Pod should run on.
+
+It evaluates:
+
+- CPU and memory availability
+- Resource requests and limits
+- Node affinity / anti-affinity
+- Taints and tolerations
+
+Once a suitable node is found, the Scheduler binds the Pod to that node.
+The Scheduler does not create Pods or containers — it only assigns Pods to nodes.
+
+>>> Worker Nodes
+-----------------
+-----------------
+
+- A Kubernetes cluster can have multiple worker nodes.
+- Each worker node runs application workloads.
+
+Each worker node contains:
+
+- Kubelet
+- Container Runtime (containerd / CRI-O)
+- kube-proxy
+- Pods
+
+>> Pods (Fundamental Unit)
+--------------------------
+
+A Pod is the smallest deployable unit in Kubernetes.
+
+A Pod can contain:
+
+- One container (most common)
+- Multiple tightly coupled containers (Group tightly coupled containers)
+
+Containers in a Pod:
+
+- Share the same IP address
+- Share storage volumes
+- Communicate via localhost
+
+>> Kubelet
+----------
+
+Kubelet is the node agent running on each worker node.
+
+Responsibilities:
+
+- Watches for Pods assigned to its node (via API Server)
+- Ensures containers in the Pod are running
+- Reports Pod and Node status back to the API Server
+
+Flow:
+
+- API Server informs the Kubelet about a new Pod
+- Kubelet reads the Pod specification
+- Kubelet instructs the container runtime to start containers
+
+>> Container Runtime & CRI
+--------------------------
+
+Kubernetes uses the Container Runtime Interface (CRI) to interact with container runtimes.
+
+Common runtimes:
+
+- containerd
+- CRI-O
+
+Responsibilities:
+
+- Pull container images
+- Create and delete containers
+- Manage container lifecycle
+- Docker is no longer used directly in Kubernetes (deprecated since v1.24).
+
+>> kube-proxy
+-------------
+
+kube-proxy manages networking and service routing on each node.
+
+It:
+
+- Implements Kubernetes Services
+- Uses iptables or IPVS rules
+- Routes traffic to the correct Pod IPs
+- kube-proxy is not a traditional proxy; it programs networking rules.
+
+>>> Self-Healing Flow (End-to-End)
+----------------------------------
+
+A Pod crashes on a worker node
+Kubelet detects the failure
+Kubelet reports the status to the API Server
+Controller Manager detects a mismatch between desired and actual state
+Controller requests creation of a replacement Pod
+Scheduler selects a suitable node
+API Server assigns the Pod to that node
+Kubelet creates containers using the container runtime
+This continuous reconciliation enables Kubernetes self-healing.
+
+Additional Important Components
+
+>> Container Network Interface (CNI)
+------------------------------------
+
+Kubernetes relies on CNI plugins (Calico, Flannel, Cilium) for networking.
+
+Responsibilities:
+
+- Assign Pod IP addresses
+- Enable Pod-to-Pod communication
+- Enforce network policies
+
+>> Cloud Controller Manager (Cloud Environments)
+------------------------------------------------
+
+Manages cloud-specific resources:
+
+- Load balancers
+- Volumes
+- Node lifecycle
+
+Keeps cloud logic separate from core Kubernetes components
+
+>> Key Takeaways
+-----------------
+
+- Kubernetes is declarative and self-healing
+- Control Plane maintains desired state
+- Worker nodes run Pods
+- Pods are the fundamental unit (not containers)
+- Continuous reconciliation ensures reliability and scalability
+
+**********************************************************
+Kubernetes Architecture – Revised Notes from ChatGPT - END
+**********************************************************
+
+>>> Set up a local Kubernetes Cluster using Docker
+
+Ref: 
+
+https://www.docker.com/blog/how-to-set-up-a-kubernetes-cluster-on-docker-desktop/
+
+
+We also have Minikube, with the help of this, we can set up smll kubernetes cluster inside the local system, but there are some drawbacks to the Minikube installation because a few of the commands that we give for the Minikube will be different compared to the actual commands that we give to the Kubernetes cluster inside the production environment, hence we avoid the Minikube installation.
+
+Step 1: In Docker Desktop, in the Settings menu, select Kubernetes > Enable Kubernetes and then Apply & restart to start a one-node Kubernetes cluster. Typically, the time it takes to set up the Kubernetes cluster depends on your internet speed to pull the needed images.
+
+Choose 'Kubeadm' as the cluster provisioning method.
+
+By default, Kubernetes containers are hidden from commands like 'docker ps', because managing them manually is not supported. Most users do not need this option. To see these internal containers, select 'Show system containers(advanced)'.
+
+Step 2: Set up 'Kubectl' on our local system
+
+By default, Kubectl is going to be installed by our Docker Desktop while it is trying to create the local Kubernetes Cluster at the following path on Windows.
+
+C:\Program Files\Docker\Docker\resources\bin\kubectl.exe
+
+This location may not be in our shell's PATH variable, so we may need to type the full path of the command or add it to the PATH.
+
+Run the following commands to verify the Kubectl installation
+
+kubectl config get-contexts - It will return the list of contexts available inside our local system
+
+		PS C:\Users\LENOVO> kubectl config get-contexts
+		CURRENT   NAME             CLUSTER          AUTHINFO         NAMESPACE
+		*         docker-desktop   docker-desktop   docker-desktop
+
+Context is a kind of isolated environment in which our client application or our CLI interact with the Kubernetes Cluster. As of now, we can see by default that there is a context created with the name 'docker-desktop'.
+
+If you have various contexts for some reason, we need to make sure we are setting the 'docker-desktop' as the default context that we want to use for our local testing using the command 'kubectl config use-context docker-desktop'
+
+		PS C:\Users\LENOVO> kubectl config use-context docker-desktop
+		Switched to context "docker-desktop".
+
+Run the following command: 'kubectl config get-clusters'
+
+		PS C:\Users\LENOVO> kubectl config get-clusters
+		NAME
+		docker-desktop
+
+We can see that there is one cluster with the name 'docker-desktop'
+
+Run the following command to see the available nodes
+
+		kubectl get nodes
+
+		PS C:\Users\LENOVO> kubectl get nodes
+		NAME             STATUS   ROLES           AGE   VERSION
+		docker-desktop   Ready    control-plane   65m   v1.34.1
+
+>>> Deploying the Kubernetes Dashboard UI
+
+Ref: https://kubernetes.io/docs/tasks/access-application-cluster/web-ui-dashboard/
+
+Kubernetes Dashboard supports only Helm-based installation currently ,as it is faster and gives us better control over all dependencies required by Dashboard to run.
+
+Helm is a package manager that we can use to install any kind of components inside a Kubernetes Cluster.
+
+Step 1: Install Helm
+
+Ref: https://helm.sh/docs/intro/install/
+
+Run the following command to install heml on Windows
+
+		winget install Helm.Helm
+
+Logs:
+
+		PS C:\Users\LENOVO> winget install Helm.Helm
+		The `msstore` source requires that you view the following agreements before using.
+		Terms of Transaction: https://aka.ms/microsoft-store-terms-of-transaction
+		The source requires the current machine's 2-letter geographic region to be sent to the backend service to function properly (ex. "US").
+
+		Do you agree to all the source agreements terms?
+		[Y] Yes  [N] No: Y
+		Found Helm [Helm.Helm] Version 4.1.1
+		This application is licensed to you by its owner.
+		Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+		Downloading https://get.helm.sh/helm-v4.1.1-windows-amd64.zip
+		  ██████████████████████████████  18.8 MB / 18.8 MB
+		Successfully verified installer hash
+		Extracting archive...
+		Successfully extracted archive
+		Starting package install...
+		Path environment variable modified; restart your shell to use the new value.
+		Command line alias added: "helm"
+		Successfully installed
+
+Verify installation by running 'helm version'
+
+		PS C:\Users\LENOVO> helm version
+		version.BuildInfo{Version:"v4.1.1", GitCommit:"5caf0044d4ef3d62a955440272999e139aafbbed", GitTreeState:"clean", GoVersion:"go1.25.7", KubeClientVersion:"v1.35"}
+
+Step 2: Set up Dashboard
+
+The Dashboard UI is not deployed by default. To deploy it, run the following commands.
+
+The Kuberenetes Dashboard project has been archived and is no longer actively maintained due to a lack of maintainers and contributors. As a result, to install or use now, we need to add the retired Helm repository using the following command:
+
+Add kubernetes-dashboard repository:
+
+		helm repo add kubernetes-dashboard https://kubernetes-retired.github.io/dashboard/
+
+Logs:
+
+		PS C:\Users\LENOVO> helm repo add kubernetes-dashboard https://kubernetes-retired.github.io/dashboard/
+		"kubernetes-dashboard" has been added to your repositories
+
+Deploy a Helm Release named "kubernetes-dashboard" using the kubernetes-dashboard chart:
+
+		helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard --create-namespace --namespace kubernetes-dashboard
+
+Logs:
+
+		PS C:\Users\LENOVO> helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard --create-namespace --namespace kubernetes-dashboard
+		Release "kubernetes-dashboard" does not exist. Installing it now.
+		NAME: kubernetes-dashboard
+		LAST DEPLOYED: Mon Feb 16 10:41:27 2026
+		NAMESPACE: kubernetes-dashboard
+		STATUS: deployed
+		REVISION: 1
+		DESCRIPTION: Install complete
+		TEST SUITE: None
+		NOTES:
+		*************************************************************************************************
+		*** PLEASE BE PATIENT: Kubernetes Dashboard may need a few minutes to get up and become ready ***
+		*************************************************************************************************
+
+		Congratulations! You have just installed Kubernetes Dashboard in your cluster.
+
+		To access Dashboard run:
+		  kubectl -n kubernetes-dashboard port-forward svc/kubernetes-dashboard-kong-proxy 8443:443
+
+		NOTE: In case port-forward command does not work, make sure that kong service name is correct.
+		      Check the services in Kubernetes Dashboard namespace using:
+		        kubectl -n kubernetes-dashboard get svc
+
+		Dashboard will be available at:
+		  https://localhost:8443
+
+To access the Dashboard, run the following command:
+
+		kubectl -n kubernetes-dashboard port-forward svc/kubernetes-dashboard-kong-proxy 8443:443
+
+Logs:
+
+		PS C:\Users\LENOVO> kubectl -n kubernetes-dashboard port-forward svc/kubernetes-dashboard-kong-proxy 8443:443
+		Forwarding from 127.0.0.1:8443 -> 8443
+		Forwarding from [::1]:8443 -> 8443
+		Handling connection for 8443
+		Handling connection for 8443
+		Handling connection for 8443
+		Handling connection for 8443
+
+*** Once you execute this command, do not try to disturb this terminalbecause if we try to close this terminal or if you execute some other command, then this exposure of the traffic will be stopped. 
+
+Now access the dashboard, using the URL: https://localhost:8443
+
+When you access the above link, you will be asked to enter a Bearer Token. You can generate a token for a service account using the following command.
+
+Step 3: Accessing the Dashboard UI:
+
+Reference: https://github.com/kubernetes-retired/dashboard/blob/master/docs/user/access-control/creating-sample-user.md
+
+Step 3.1: Creating a Service Account
+
+A service account is nothing but a credential that we are trying to create for a particular user
+
+We need to create a YAML Configuration file with the following content and provide it to the Kubernetes Cluster
+
+	dashboard-adminuser.yaml
+
+		apiVersion: v1
+		kind: ServiceAccount
+		metadata:
+		  name: admin-user
+		  namespace: kubernetes-dashboard
+
+We are going to keep this file in the following location:
+
+		D:\GitHubRepos\New\Spring-Boot-Projects\Microservices\Container-Orchestration-Using-Kubernetes\K8s
+
+		PS D:\GitHubRepos\New\Spring-Boot-Projects\Microservices\Container-Orchestration-Using-Kubernetes\K8s> ls
+
+
+		    Directory: D:\GitHubRepos\New\Spring-Boot-Projects\Microservices\Container-Orchestration-Using-Kubernetes\K8s
+
+
+		Mode                 LastWriteTime         Length Name
+		----                 -------------         ------ ----
+		-a----         2/16/2026  12:53 PM            102 dashboard-adminuser.yaml
+
+
+		PS D:\GitHubRepos\New\Spring-Boot-Projects\Microservices\Container-Orchestration-Using-Kubernetes\K8s>
+
+Run the following command to provide this configration information to Kubernetes Cluster
+
+		kubectl apply -f dashboard-adminuser.yaml
+
+Logs:
+
+		PS D:\GitHubRepos\New\Spring-Boot-Projects\Microservices\Container-Orchestration-Using-Kubernetes\K8s> kubectl apply -f .\dashboard-adminuser.yaml
+		serviceaccount/admin-user created
+
+Step 3.2: Creating a ClusterRoleBinding
+
+We are going to provide privileges to the newly created service account with the help of ClusterRoleBinding
+
+Create a file named 'dashboard-rolebinding.yaml' with the following content
+
+	dashboard-rolebinding.yaml
+
+	apiVersion: rbac.authorization.k8s.io/v1
+	kind: ClusterRoleBinding
+	metadata:
+	  name: admin-user # Name of the ClusterRoleBinding
+	roleRef:
+	  apiGroup: rbac.authorization.k8s.io
+	  kind: ClusterRole # What is the ClusterRole you want to bind
+	  name: cluster-admin # Name of the Role, whoever has this role can become the admin of the cluster To which User or which ServiceAccount you want to bind
+	subjects: # Under subjects, we can define any no of users or service accounts
+	- kind: ServiceAccount # Kind of User
+	  name: admin-user # Name of the service account name
+	  namespace: kubernetes-dashboard
+
+We are trying to bind a ClusterRole to the ServiceAccount that we have created previously.
+
+Run the following command to bind the ClusterRole to the ServiceAccount:
+
+		kubectl apply -f .\dashboard-rolebinding.yaml
+
+Logs:
+
+		PS D:\GitHubRepos\New\Spring-Boot-Projects\Microservices\Container-Orchestration-Using-Kubernetes\K8s> kubectl apply -f .\dashboard-rolebinding.yaml
+		clusterrolebinding.rbac.authorization.k8s.io/admin-user created
+
+Step 3.3: Getting a Bearer Token for ServiceAccount
+
+-n indicates namespace
+
+This token is going to be short-lived.
+
+Run the following command to get the Bearer token for the ServiceAccount we created previously
+
+		kubectl -n kubernetes-dashboard create token admin-user
+
+Logs:
+
+		PS D:\GitHubRepos\New\Spring-Boot-Projects\Microservices\Container-Orchestration-Using-Kubernetes\K8s> kubectl -n kubernetes-dashboard create token admin-user
+		eyJhbGciOiJSUzI1NiIsImtpZCI6ImpVWFVLc19Ud01hVVY5OHgzdlZqNDlCVFJERmUzZ1JaSGtEa0RQcVZpX3cifQ.eyJhdWQiOlsiaHR0cHM6Ly9rdWJlcm5ldGVzLmRlZmF1bHQuc3ZjLmNsdXN0ZXIubG9jYWwiXSwiZXhwIjoxNzcxMjMzMDk5LCJpYXQiOjE3NzEyMjk0OTksImlzcyI6Imh0dHBzOi8va3ViZXJuZXRlcy5kZWZhdWx0LnN2Yy5jbHVzdGVyLmxvY2FsIiwianRpIjoiNGZlNjZjMTctMjZiYi00MWEyLWJkN2QtMTgwOWE1OTU3ZDVjIiwia3ViZXJuZXRlcy5pbyI6eyJuYW1lc3BhY2UiOiJrdWJlcm5ldGVzLWRhc2hib2FyZCIsInNlcnZpY2VhY2NvdW50Ijp7Im5hbWUiOiJhZG1pbi11c2VyIiwidWlkIjoiNzE4ZmI5NDAtOTRiNi00ZTZiLWI2ZTUtNWQwOTM0MzMwOGVhIn19LCJuYmYiOjE3NzEyMjk0OTksInN1YiI6InN5c3RlbTpzZXJ2aWNlYWNjb3VudDprdWJlcm5ldGVzLWRhc2hib2FyZDphZG1pbi11c2VyIn0.BVjmzlCdXC1b54T73f46x3XcXIzgM9QM6ke3x0MyYKPYhPVP6aCYxQ0foX7gfG-Ec_Byqc4Nu8yRkNcfR4TDthh-5vY3CEKD_czCxrS-aBWAzq0I9XOj2AJsTPh3iTXOKqFfxkEShnO1ik305ZNIwRt7CdAFojQ1dKB9y_1xcRKOZhpUDFMu6Hqg0RYXKFnMnal-hWJtUTF2Z1hFMAJCdMXEn_7m-ANO14Yn9UKSnGRq6NmWNwH_k1yDMN-qLYjDY369SZMkJy7D0-9dD8lkBA5c1Mxgr91ZNm0YTLjGUVcYA9rWnzTZ_U0U3LtvE2rp6M28gySlBprrqtBKAJOxrg
+
+Step 3.4: Getting a long-lived Bearer Token for ServiceAccount
+
+Create a new file named 'secret.yaml' with the following content:
+
+	secret.yaml
+
+		apiVersion: v1
+		kind: Secret
+		metadata:
+		  name: admin-user
+		  namespace: kubernetes-dashboard
+		  annotations:
+		    kubernetes.io/service-account.name: "admin-user" # We are creating a secret for the admin-user we created previously
+		type: kubernetes.io/service-account-token  
+
+Run the following command to create the secret:
+
+		kubectl apply -f .\secret.yaml
+
+Logs:
+
+		PS D:\GitHubRepos\New\Spring-Boot-Projects\Microservices\Container-Orchestration-Using-Kubernetes\K8s> kubectl apply -f .\secret.yaml
+
+		secret/admin-user created
+
+After Secret is created, we can execute the following command to get the token which saved in the Secret:
+
+*** Make sure you run this command using Git Bash
+
+		kubectl get secret admin-user -n kubernetes-dashboard -o jsonpath="{.data.token}" | base64 -d
+
+Logs:
+
+		LENOVO@DESKTOP-63GOG5U MINGW64 /d/GitHubRepos/New/Spring-Boot-Projects/Microservices/Container-Orchestration-Using-Kubernetes/K8s (main)
+		$ kubectl get secret admin-user -n kubernetes-dashboard -o jsonpath="{.data.token}" | base64 -d
+		eyJhbGciOiJSUzI1NiIsImtpZCI6ImpVWFVLc19Ud01hVVY5OHgzdlZqNDlCVFJERmUzZ1JaSGtEa0RQcVZpX3cifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJrdWJlcm5ldGVzLWRhc2hib2FyZCIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VjcmV0Lm5hbWUiOiJhZG1pbi11c2VyIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQubmFtZSI6ImFkbWluLXVzZXIiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC51aWQiOiI3MThmYjk0MC05NGI2LTRlNmItYjZlNS01ZDA5MzQzMzA4ZWEiLCJzdWIiOiJzeXN0ZW06c2VydmljZWFjY291bnQ6a3ViZXJuZXRlcy1kYXNoYm9hcmQ6YWRtaW4tdXNlciJ9.ej700m4zfZFjXMTLyMoN6fsrR999S593pYruiWCWpEVyP4bJXAIsddDsCnRKLCOCiloJBXq27NePPMaD_SG9MnrVTL2vVTye4VGzx_qEAMhPZ7tSnuu62XFdpebZXcTkwQjJ93tlRobBH5-_ODOMUuwTEq7DOGlHNx33jLSel3Jmw_mfHrfzNkUNkD3x8GhcHwHtUR6FGZ4GpZJzvbC3oporrXPlyZjmIUvqo8bU8T4X1939wa0w1k4U7LS-Z61Gthhs6JtrpunNzAUMAcwu25S5vDKwe9EWaC4zSMUDeh4Nq87iELEoNQcm4_4aMIT5smW5nyzpKkvGdlr7P2ESiw
+
+Log out from the Dashboard and use the above new token to login
+
+>>> Deploying our Microservices into Kubernetes Cluster
+
+Currently, our local Kubernetes Cluster is running successfully on our system. 
+
+The next step is to deploy all our microservices into this Kubernetes Cluster. After that, we can validate the features provided by Kubernetes, which will simplify our microservice deployment process.
+
+To begin deploying our microservices, we need to provide Kubernetes with instructions on how we want to deploy them and how we wish to expose them. This information must be specified in a YAML configuration file. 
+
+It's important to note that we cannot directly use the Docker Compose configurations we previously employed, as Kubernetes cannot interpret the format or syntax of Docker Compose.
+
+>>> Deploying ms-config-server into Kubernetes Cluster
+
+Step 1: Create a manifest file named ms-config-server.yaml with the following content
+
+		apiVersion: apps/v1
+		kind: Deployment
+		metadata:
+		  name: ms-config-server-deployment
+		  labels:
+		    app: ms-config-server
+		spec:
+		  replicas: 1 # If we specify three, our Kubernetes Cluster will deploy our config server across different parts with three separate instances.
+		  selector:
+		    matchLabels:
+		      app: ms-config-server
+		  template:
+		    metadata:
+		      labels:
+		        app: ms-config-server
+		    spec:
+		      containers: # We specified a list element with a hyphen (-) under the containers, indicating a single container for our Kubernetes deployment. This will create a pod with one container on a worker node. If our ms-config-server container requires a helper container, we need to repeat the container instructions as a new list element under 'containers'.
+		      - name: ms-config-server
+		        image: dhandapaniks/ms-config-server:0.0.9
+		        ports:
+		        - containerPort: 8071
+		---
+		# The three hyphens between the Deployment and Service configurations in a YAML file indicate that the file should be treated as two separate YAML files.
+		apiVersion: v1
+		kind: Service # To expose our ms-config-server in a Kubernetes cluster or restrict it for internal use, we need to create a 'Service' to control its external communication.
+		metadata:
+		  name: ms-config-server
+		spec:
+		  selector:
+		    app: ms-config-server
+		  type: LoadBalancer
+		  ports:
+		    - protocol: TCP
+		      port: 8071
+		      targetPort: 8071
+  
+Note that in real projects, a developer is not responsible to write these Kubernetes configuration files.
+
+We specified a list element with a hyphen (-) under the containers, indicating a single container for our Kubernetes deployment. This will create a pod with one container on a worker node. If our ms-config-server container requires a helper container, we need to repeat the container instructions as a new list element under 'containers'.
+
+With Deployment, we simply deploy our ms-config-server into a Kubernetes Cluster. How about exposign that containers to the outside world or restricting those containers only for internal communication? So, to control how we want to expose our microservice container to the outside world, we need to create one more subject with the name or kind 'Service'. 
+
+In YAML files, when we see three hyphens (---) between two configurations, such as Deployment and Service, it signals to YAML that it should treat the contents as two separate YAML documents.
+
+Step 2: Deploy ms-config-server using the Manifest file created using the above step
+
+The command 'kubectl get deployments' will show us all the deployments inside our Kubernetes Cluster
+
+		PS D:\STS_WS\Container-Orchestration-Using-Kubernetes\kubernetes> kubectl get deployments
+		No resources found in default namespace.
+
+As of now, there are no resources found in the default namespace.
+
+The command 'kubetctl get services' will show us all the services availale inside our Kubernetes Cluster
+
+		PS D:\STS_WS\Container-Orchestration-Using-Kubernetes\kubernetes> kubectl get services
+		NAME         TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+		kubernetes   ClusterIP   10.96.0.1    <none>        443/TCP   7h28m
+
+As of now, we can see there is one default service which is related to Kubernetes Cluster, but there is no service which is related to our microservices.
+
+The command 'kubectl get replicaset' will shows the available Replica Sets
+
+		PS D:\STS_WS\Container-Orchestration-Using-Kubernetes\kubernetes> kubectl get replicaset
+		No resources found in default namespace.
+
+Step 2.1: Create the Deployment and Service by running 'kubectl apply -f ms-config-server.yaml'
+
+		PS D:\STS_WS\Container-Orchestration-Using-Kubernetes\kubernetes> ls
+
+		    Directory: D:\STS_WS\Container-Orchestration-Using-Kubernetes\kubernetes
+
+		Mode                 LastWriteTime         Length Name
+		----                 -------------         ------ ----
+		-a----         2/16/2026   4:42 PM           1445 ms-config-server.yaml
+
+		PS D:\STS_WS\Container-Orchestration-Using-Kubernetes\kubernetes> kubectl apply -f .\ms-config-server.yaml
+		deployment.apps/ms-config-server-deployment created
+		service/ms-config-server created
+		PS D:\STS_WS\Container-Orchestration-Using-Kubernetes\kubernetes>
+
+Verify the creation of our new Deployment by running 'kubectl get deployments'
+
+		PS D:\STS_WS\Container-Orchestration-Using-Kubernetes\kubernetes> kubectl get deployments
+		NAME                          READY   UP-TO-DATE   AVAILABLE   AGE
+		ms-config-server-deployment   1/1     1            1           5m24s
+
+Verify the creation of our new Service by running 'kubectl get services'
+
+		PS D:\STS_WS\Container-Orchestration-Using-Kubernetes\kubernetes> kubectl get services
+		NAME               TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
+		kubernetes         ClusterIP      10.96.0.1       <none>        443/TCP          7h42m
+		ms-config-server   LoadBalancer   10.110.54.254   localhost     8071:32582/TCP   9m13s
+
+By default, each of our container service is going to get a Cluster IP Address which is going to make sense only within the cluster but when we try to expose to the outside world, the external IP address will be available under the EXTERNAL-IP column. Since this is our local system, it is showing as 'localhost' where as if we try to deploy into a Cloud environment, we will get a real public IP Address and we can see as of now, our container is exposed at the port 8071. We will understand later on why we are ale to see Port which is 32582 when we try to discuss abou thte Load Balancer and the other Service types available inside the Kubernetes. 
+
+Verify the creation of Replica Sets by running 'kubectl get replicaset'
+
+		PS D:\STS_WS\Container-Orchestration-Using-Kubernetes\kubernetes> kubectl get replicaset
+		NAME                                     DESIRED   CURRENT   READY   AGE
+		ms-config-server-deployment-7799fc8d98   1         1         1       10m
+
+Verify the creation of Pods by running the 'kubectl get pods'
+
+		PS D:\STS_WS\Container-Orchestration-Using-Kubernetes\kubernetes> kubectl get pods
+		NAME                                           READY   STATUS    RESTARTS   AGE
+		ms-config-server-deployment-7799fc8d98-9xxdn   1/1     Running   0          11m
+
+Step 2.2: Access the APIs of ms-config-server
+
+	http://localhost:8071/ms-accounts/prod
+
+		{
+		  "name": "ms-accounts",
+		  "profiles": [
+		    "prod"
+		  ],
+		  "label": null,
+		  "version": "6017f187f24cf5d57f7ef0711653cc20b8252607",
+		  "state": "",
+		  "propertySources": [
+		    {
+		      "name": "https://github.com/ksdhandapani/microservices-config-server-configuration-source.git/ms-accounts-prod.properties",
+		      "source": {
+		        "build.version": "1.0",
+		        "accounts.message": "Welcome to Accounts related PROD Test APIs",
+		        "accounts.contactDetails.name": "Dhandapani Sudhakar - PROD Lead",
+		        "accounts.oncallsupport": "9876543210,897654312",
+		        "accounts.contactDetails.email": "ksdhandapani96_prod@gmail.com"
+		      }
+		    },
+		    {
+		      "name": "https://github.com/ksdhandapani/microservices-config-server-configuration-source.git/ms-accounts.properties",
+		      "source": {
+		        "build.version": "3.0",
+		        "accounts.message": "Welcome to Accounts related local (Default Profile) APIs",
+		        "accounts.contactDetails.name": "Dhandapani Sudhakar",
+		        "accounts.oncallsupport": "9876543210,897654312",
+		        "accounts.contactDetails.email": "ksdhandapani96@gmail.com"
+		      }
+		    }
+		  ]
+		}
+
+	http://localhost:8071/ms-accounts/qa
+
+		{
+		  "name": "ms-accounts",
+		  "profiles": [
+		    "qa"
+		  ],
+		  "label": null,
+		  "version": "6017f187f24cf5d57f7ef0711653cc20b8252607",
+		  "state": "",
+		  "propertySources": [
+		    {
+		      "name": "https://github.com/ksdhandapani/microservices-config-server-configuration-source.git/ms-accounts-qa.properties",
+		      "source": {
+		        "build.version": "2.0",
+		        "accounts.message": "Welcome to Accounts related QA APIs",
+		        "accounts.contactDetails.name": "Dhandapani Sudhakar - QA Lead",
+		        "accounts.oncallsupport": "9876543210,897654312",
+		        "accounts.contactDetails.email": "ksdhandapani96_qa@gmail.com"
+		      }
+		    },
+		    {
+		      "name": "https://github.com/ksdhandapani/microservices-config-server-configuration-source.git/ms-accounts.properties",
+		      "source": {
+		        "build.version": "3.0",
+		        "accounts.message": "Welcome to Accounts related local (Default Profile) APIs",
+		        "accounts.contactDetails.name": "Dhandapani Sudhakar",
+		        "accounts.oncallsupport": "9876543210,897654312",
+		        "accounts.contactDetails.email": "ksdhandapani96@gmail.com"
+		      }
+		    }
+		  ]
+		}
+
+Step 3: Create Environment Variables in the Kubernetes Cluster Using ConfigMaps
+
+References:
+
+- [Kubernetes ConfigMaps Documentation](https://kubernetes.io/docs/concepts/configuration/configmap/)
+- [Kubernetes Secrets Documentation](https://kubernetes.io/docs/concepts/configuration/secret/)
+
+Problem:
+
+In our current Docker Compose files, all containers rely on several environment variables. These include the active profile (SPRING_PROFILES_ACTIVE), the configuration import URL (SPRING_CONFIG_IMPORT), and the Eureka Server URL (EUREKA_CLIENT_SERVICEURL_DEFAULTZONE).
+
+Solution:
+
+Since all our microservices depend on these environment variables to function, we need to find a way to create similar variables within the Kubernetes Cluster. To do this, we will create a ConfigMap object in Kubernetes.
+
+A ConfigMap is an object used to store non-confidential data in key-value pairs. Pods can consume ConfigMaps as environment variables, command line arguments, or as configuration files in a volume.
+
+Note: ConfigMaps do not provide secrecy or encryption. If you need to store confidential data, use a Secret instead of a ConfigMap or employ additional tools to keep your data secure.
+
+Step 3.1: Create a File Named 'configmaps.yaml' with the below content
+
+In the 'configmaps.yaml' file, we will not define any properties related to Kafka, RabbitMQ, or OpenTelemetry. The reason for this is that we will cover how to set up Kafka or Grafana components in Kubernetes when we discuss Helm Charts. Writing Kubernetes manifest files for industry-provided components like Kafka and Grafana can be unnecessary and overly complicated.
+
+For now, we will deploy only our microservices along with KeyCloak. KeyCloak is essential; we cannot skip it because our gateway server is secured. Without the KeyCloak server, we will not be able to access any APIs necessary for creating data within our microservices.
+
+	configmaps.yaml
+
+		apiVersion: v1
+		kind: ConfigMap
+		metadata:
+		  name: xyzbank-configmap
+		data:
+		  SPRING_PROFILES_ACTIVE: prod
+		  SPRING_CONFIG_IMPORT: "configserver:http://ms-config-server:8071/" # Location of the Config Server
+		  EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://ms-eurekaserver:8070/eureka/"
+		  CONFIG_SERVER_APPLICATION_NAME: "ms-config-server"
+		  EUREKASERVER_APPLICATION_NAME: "ms-eurekaserver"
+		  GATEWAY_SERVER_APPLICATION_NAME: "ms-gateway-server"
+		  ACCOUNTS_APPLICATION_NAME: "ms-accounts"
+		  LOANS_APPLICATION_NAME: "ms-loans"
+		  CARDS_APPLICATION_NAME: "ms-cards"
+		  KEYCLOAK_BOOTSTRAP_ADMIN_USERNAME: "admin"
+		  KEYCLOAK_BOOTSTRAP_ADMIN_PASSWORD: "admin"
+		  SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK-SET-URI: "http://keycloak:8080/realms/master/protocol/openid-connect/certs" # With this path, we are telling our Gateway Server to validate the JWT tokens by using the public keys exposed by Keycloak server. The KeyCloak Server has Private Certificate or Key, using the private key only the KeyCloak issues the new tokens.
+
+Create the ConfigMaps by running the command 'kubectl apply -f configmaps.yaml'
+
+	Logs:
+
+		PS D:\STS_WS\Container-Orchestration-Using-Kubernetes\kubernetes> kubectl apply -f .\configmaps.yaml
+		configmap/xyzbank-configmap created
+
+Step 4: Preparing Kubernetes Manifest files for remaining microservices
+
+Note: (IMPORTANT) We are going to use the image version 0.0.7 for the microservices we developed that covering Miroservices Security, we are not going to use 0.0.8 or 0.0.9 which were created for Event Driven Microservices using RabbitMQ and Apache Kafka. We will be using them when we learn Helm Charts
+
+
+
+
+We have a link named 'Our Services', right, when someone clicks on 'Wedding Decor', I want to go to a different page named 'Wedding Services', in that page, I need to have 3 different sections named 'Silver', 'Gold', and 'Platinum' Categories. 
+Each category should redirect me to a different pages named 'Silver Wedding Plans', 'Gold Wedding Plans', and 'Platinum Wedding Plans'
+
+Frontend Technologies: HTML5, CSS3, JavaScript (ES6+), TypeScript, React.js, Next.js, Redux, Redux Toolkit, RTK Query, StoryBook, Bootstrap, Tailwind CSS, Material-UI, React-Bootstrap, React Router, Framer Motion
+UI/UX & Design Tools: Figma, Responsive Design, Mobile-First Design, Cross-Browser Compatibility, Accessibility (WCAG/a11y), Pixel-Perfect Design
+API Integration: REST APIs, GraphQL, Apollo Client, Axios, Fetch API
+State Management: Redux, Context API, Redux Toolkit, RTK Query
+Performance Optimization: Lazy Loading, Code Splitting, Lighthouse Audits
+Version Control & Collaboration: Git, GitHub, GitLab
+Backend: Node.js, Express.js, Python
+Databases: SQL, MongoDB, Mongoose 
+Test Libraries: Jest, Vitest
+
+
+PSU - 
+
+4 Outstanding
+
+200000
+
+Frontend Developer with 2 years of experience building scalable and responsive web applications using React.js and Angular. Passionate about crafting intuitive, user-centric, and high-performance interfaces. Strengthened technical expertise through advanced training in React, JavaScript, HTML, and CSS. Eager to contribute to a collaborative development team while continuously enhancing skills and delivering high-quality frontend solutions.
+
+Built dynamic product catalog with pagination and filtering.
+Implemented secure JWT-based authentication and authorization.
+Developed persistent shopping cart with full CRUD operations.
+Designed and implemented a multi-step checkout flow (address, shipping, payment).
+Integrated Stripe for secure online payment processing.
+Developed RESTful APIs using Node.js and Express.js.
+Implemented order management including order creation and tracking.
+Applied security practices including input validation and rate limiting.
+Managed application state using Redux.
+Wrote unit and integration tests using Jest and Supertest.
+Maintained version control using Git with clean branching strategies.
+Worked in Agile methodology with active participation in sprint ceremonies.
+
+
+Project: GrowX.AI – Frontend Developer
+
+Technologies: Next.js, React
+
+Built intuitive and scalable fintech interfaces using Next.js to simplify SME banking and financial workflows. Contributed to product research in the UAE fintech ecosystem and supported expansion into international markets.
+
+Roles & Responsibilities
+
+Designed and implemented end-to-end frontend flows for financial services including Admin Portal, Customer Portal (User Onboarding, User Profile Management, and Financial Services Modules)
+Translated complex multi-bank and financial integrations into simple, user-friendly SME experiences.
+Built responsive, secure, and high-performance UI components optimized for cross-device and multi-region usage.
+Collaborated with backend teams to integrate APIs and deliver seamless fintech solutions.
+Ensured scalability and maintainability through reusable components and modular architecture.
+Improved usability and accessibility to reduce friction in SME financial operations.
+
+Improved page load performance by 25% by implementing lazy loading and code-splitting techniques.
+Reduced API response latency by 20% by optimizing Axios requests, implementing pagination, and improving state management.
+
+I had severe vitamin D deficiency
+
+
+
+
+3 Phase
+
+Nutrition
+Physcial Activity
+Sleep Recovery
+Srress Managemnt
+
+Deit and Supplemental
+Muscle building
+ADEK - 
+
+B12, Iron D, B12, Zinc, Testerostrone
+
+Elemmination
+Reintrocutions
+Maintenance
+
+ healing phase: Triggers and possible triggers
+Whole grains, nuts and fruits, eggs, fish
+
+Reintroduction phase: 
+
+Maintenance phase: 
+
+It is low now
+
+LES LAX - Functional
+
+Nutrilite - Amway (24/7)
+
+Weekly review
+
+5 to 6 AM - stress management system
+
+3 months - 15K
+
+Functional Medicine - 
+
+Nutrilite pro biobiotic 
+Pre biotic
+
+BComplex with, east
+
+B13, Viamin D3
+
+Can GERD due to LES weakness be cured?
+
+5
+
+It all started a day when I was very anxieus.
+
+
+No phone screen after 7 PM
+Have good sleep
+
+Hypher Gut-Brain Axis
+
+Milk is not for adults
+
+Acid is not in right place
+Damaged the musocal layer
+
+How do I know If I have low stomach acid?
+
+Does the cost of the personalized program cover the costs of supplements (if you are going to suggest anything)?
+
+Can GERD due to relaxed LES (Hill Grade III) be cured through this program?
+Can GERD due to relaxed LES (Hill Grade III) be cured through this program?
+
+8557999888
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

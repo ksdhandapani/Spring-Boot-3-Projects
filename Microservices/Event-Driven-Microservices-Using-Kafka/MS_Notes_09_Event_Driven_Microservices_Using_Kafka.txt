@@ -1,0 +1,413 @@
+**************************************************************************
+Event-driven microservices using Kafka, Spring Cloud Functions, and Stream
+**************************************************************************
+
+>>> Differences between Kafka and RabbitMQ
+------------------------------------------
+
+Kafka and RabbitMQ are both popular messaging systems, but they have some fundamental differences in terms of design philosophy, architecture, and use cases. Here are the key distinctions between Kafka and RabbitMQ.
+
+Design: Kafka is a distributed event streaming platform, while RabbitMQ is a message broker. This means that Kafka is designed to handle large volumes of data, while RabbitMQ is designed to handle smaller volumes of data with more complex routing requirements.
+
+Data retention: Kafka stores data on disk, while RabbitMQ stores data in memory. This means that Kafka can retain data for longer periods of time, while RabbitMQ is more suitable for applications that require low latency.
+
+Performance: Kafka is generally faster than RabbitMQ, especially for large volumes of data. However, RabbitMQ can be more performant for applications with complex routing requirements.
+
+Scalability: Kafka is highly scalable, while RabbitMQ is more limited in its scalability. This is because Kafka can be scaled horizontally to any extent by adding more brokers to the cluster.
+
+Ultimately, the best choice for you will depend on your specific needs and requirements. If you need a high-performance messaging system that can handle large volumes of data, Kafka is a good choice. If you need a messaging system with complex routing requirements, RabbitMQ is a good choice.
+
+>>> Examples of more complex routing requirements that RabbitMQ can efficiently handle: (Copied from questions section)
+
+RabbitMQ's Complex Routing Capabilities:
+
+Direct Exchange: Routes by routing key (e.g., "order.process" vs "invoice.process")
+Topic Exchange: Wildcard routing patterns (e.g., "stock.usd" vs "stock.eur")
+Header Exchange: Routes based on message header attributes (content type, priority)
+Fanout Exchange: Broadcasts to all queues (publish-subscribe pattern)
+Dead Letter Exchange: Routes failed/undeliverable messages to special queues
+
+>>> What is Apache Kafka
+------------------------
+
+Apache Kafka is an open-source distributed event streaming platform. It is designed to handle large-scale, real-time data streams and enable high-throughput, fault-tolerant, and scalable data processing. It is used to build real-time streaming data pipelines and applications that adapt to the data streams.
+
+Here are some key concepts and components of Kafka:
+
+Producers: Producers are responsible for publishing messages to Kafka topics. They write messages to a specific topic, and Kafka appends these messages to the topic's log.
+
+Topics: Kafka organizes data into topics. A topic is a particular stream of data that can be divided into partitions. Each message within a topic is identified by its offset.
+
+Brokers: Brokers are the Kafka servers that manage the storage and replication of topics. They are responsible for receiving messages from producers, assigning offsets to messages, and serving messages to consumers.
+
+Partitions: Topics can be divided into multiple partitions, allowing for parallel processing and load balancing. Each partition is an ordered, immutable sequence of messages, and each message within a partition has a unique offset.
+
+Offsets: Offsets are unique identifiers assigned to each message within a partition. They are used to track the progress of consumers. Consumers can control their offsets, enabling them to rewind or skip messages based on their needs.
+
+Replication: Kafka allows topics to be replicated across multiple brokers to ensure fault tolerance. Replication provides data redundancy, allowing for failover and high availability.
+
+Consumers: Consumers read messages from Kafka topics. They subscribe to one or more topics and consume messages by reading from specific partitions within those topics. Each consumer maintains its offset to track its progress in the topic.
+
+Consumer Groups: Consumers can be organized into consumer groups. Each message published to a topic is delivered to only one consumer within each group. This enables parallel processing of messages across multiple consumers.
+
+Streams: Kafka Streams is a client library that enables stream processing within Kafka. It allows you to build applications that consume, transform, and produce data in real-time.
+
+- A Kafka cluster can have any number of producers, consumers, and brokers. For a production setup, at least 3 brokers are recommended. This helps in maintaining replication, fault tolerant system, etc.
+
+- A Kafka broker can have any number of topics. A Topic is a category under which producers can write and interested, authoirzed consumers can read data. For example, we can have topics like 'sendCommunication', 'dispatchOrder', 'purgeData', etc.
+
+- Inside each topic, we can have any number of partitions. Why do we need partitions? Since Kafka producers can handle enormous amounts of data, it is not possible to store it in a single server (broker). Therefore, a topic will be partitioned into multiple parts and distributed across multiple brokers, since Kafka is a distributed system. For example, we can store all customers' data from a state, zipcode, region, etc. inside a partition, and the same can be replicated as per the configuration.
+
+- Offset is a sequence id assigned to a message as it gets stored inside a partition. The offset number starts from 0 and is followed by 1,2,3,... Once the offset id is assigned, it will never change. These are similar to sequence IDs inside the DB tables.
+
+- By keeping track of offsets, Kafka provides reliability, fault tolerance, and flexibility to consumers. Consumers have fine-grained control over their progress, enabling them to manage message ordering, replay messages, ensure message delivery, and facilitate parallel processing.
+
+>>> Producer Side Story:
+------------------------
+
+1. Producer Configuration: Producers must be configured with properties like Kafka broker addresses, message serialization format, and optional settings such as compression or batching.
+
+2. Topic Selection: Producers specify the topic for the message. Topics can be created dynamically if they don't exist, based on the broker's settings.
+
+3. Message Production: Using the Kafka client library, the producer sends a message to the specified topic, optionally including a partition key for targeted partitioning.
+
+4. Partition Assignment: If a partition key is provided, Kafka uses it to select the target partition. Otherwise, a round-robin or hashing method distributes messages across partitions.
+
+5. Message Routing and Offset Assignment:** The message is sent to the appropriate Kafka broker, which appends it to the log of the relevant partition in a durable manner using an offset ID.
+
+6. Message Replication: Kafka replicates messages across brokers for high availability. Once written to the leader partition, messages are asynchronously replicated to other replicas.
+
+7. Acknowledgement and Error Handling: Producers receive acknowledgement once the message is written to the leader partition. They can handle errors and retries based on the acknowledgement mode, which can involve waiting for confirmation from all replicas or just the leader.
+
+>>> Consumer Side Story:
+------------------------
+
+1. Consumer Group and Topic Subscription: Consumers in Kafka are typically organized into consumer groups. Before reading messages, a consumer needs to join a consumer group and subscribe to one or more topics. This subscription specifies which topics the consumer wants to consume messages from.
+
+2. Partition Assignment: Kafka assigns the partitions of the subscribed topics to the consumers within the consumer group. Each partition is consumed by only one consumer in the group. Kafka ensures a balanced distribution of partitions among consumers to achieve parallel processing. 
+
+3. Offset Management: Each consumer maintains its offset for each partition it consumes. Intially the offset is set to the last committed offset or a specified starting offset. As the consumer reads messages, it updates its offset to keep track of the progress.
+
+4. Fetch Request: The consumer sends fetch requests to the Kafka broker(s) it is connected to. The fetch request includes the topic, partition, and the offset from which the consumer wants to read messages. The request also specifies the maximum number of messages to be fetched in each request.
+
+5. Message Fetching: Upon receiving the fetch request, the Kafka Broker retrieves the requested messags form the corresponding partition's log. It sends the messages back to the consumer in a fetch response. The response contains the messages, their associated offsets, and metadata.
+
+6. Message Processing: Once the consumer receives the messages, it processes them according to its application logic. This processing can involve transformations, aggregations, calculations, or any other operations based on the business requirements.
+
+7. Committing the Offset: After successfully processing a batch of messages, the consumer needs to commit the offset to Kafka. This action signifies that the consumer has completed processing the messages up to that offset. Committing the offset ensures that the consumer's progress is persisted and can be resumed from that point in case of failure or restart.
+
+8. Polling Loop: The consumer repeats the process of sending fetch requests, receiving messages, processing them, and committing the offset in a continuous loop. This loop allows the consumer to continously consume and process new messages as they become available.
+
+>>> Installation of Apache Kafka
+
+https://kafka.apache.org/
+https://kafka.apache.org/quickstart/
+
+Run the following Docker command
+
+		docker run -p 9092:9092 apache/kafka:4.1.1
+
+Now Kafka is available on port 9092
+
+>>> Implementation of Asynchronous Communication or Event Streaming using Kafka
+
+Step 1: Updates to pom.xml of ms-accounts and ms-message
+
+In ms-accounts and ms-message, replace 'spring-cloud-stream-binder-rabbit' dependency with 'spring-cloud-stream-binder-kafka'
+
+Replace
+
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-stream-binder-rabbit</artifactId>
+		</dependency>
+
+With
+		
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-stream-binder-kafka</artifactId>
+		</dependency>
+
+Step 2: Replace project version 0.0.8 with 0.0.9 for all the services
+
+Step 3: Update application.properties of ms-message
+
+Step 3.1:Remove properties related to rabbitmq
+
+Step 3.2: Add the following properties
+
+	# Configuring the Kafka broker address for the binder to connect to the Kafka cluster.
+	spring.cloud.stream.kafka.binder.brokers=localhost:9092
+
+Step 4: Update application.properties of ms-accounts
+
+Step 4.1:Remove properties related to rabbitmq
+
+Step 4.2: Add the following properties
+
+	# Configuring the Kafka broker address for the binder to connect to the Kafka cluster.
+	spring.cloud.stream.kafka.binder.brokers=localhost:9092
+
+Step 5: Start the application in the following order to test the changes
+
+ms-config-server, ms-eurekaserver, ms-accounts, ms-message, and ms-gateway-server
+
+Verify if the required topics are created
+
+We are going to use the 'Kafkalytic' extension of IntelliJ IDEA
+
+We can see that we have two consumers named ms-accounts and ms-message
+
+Communication between ms-accounts and ms-message will be two-way, using asynchronous communication. First, the ms-accounts service will produce a message for the ms-message service. In this scenario, the ms-message service will act as a consumer. In the reverse scenario, where ms-message produces a message, the ms-accounts service will act as a consumer. That is why, under consumers, we are able to see both of them.
+
+Step 6: Start the Redis container through Docker Desktop
+
+Step 7: Start the  KeyCloak container through Docker Desktop
+
+Step 7.1: Log in to KeyCloak and verify if the previously configured Client Credentials and Roles are available
+
+http://127.0.0.1:8050/admin/master/console/#/master/clients
+http://127.0.0.1:8050/admin/master/console/#/master/roles
+
+Step 8: Call Create Account API
+
+Step 8.1: Authenticate using KeyCloak
+
+Copy Client Secret from KeyCloak and paste it in the 'Authorization' section
+Click on 'Get New Access Token'. Once authenticated, click on 'Use Token'
+
+		curl --location 'http://localhost:8072/xyzbank/ms-accounts/api/accounts/create' \
+		--header 'Content-Type: application/json' \
+		--header 'Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI5WFhaNElNenlKeWNtSFhrajllaE9XTmJYQ3p1bW9aQ1c3TFdFbXFuRS1nIn0.eyJleHAiOjE3Njg3NDA5NTAsImlhdCI6MTc2ODc0MDg5MCwianRpIjoidHJydGNjOjQ2NzQ5N2NhLTA4MjUtZjkyMy0yZDEwLWQ5M2ZmM2M4YWFjNyIsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6ODA1MC9yZWFsbXMvbWFzdGVyIiwiYXVkIjoiYWNjb3VudCIsInN1YiI6IjU5NTdiOWJiLTc5Y2EtNGMyZi1hNTg2LWUzMzcwMTFkY2NmZCIsInR5cCI6IkJlYXJlciIsImF6cCI6Inh5emJhbmstY2FsbGNlbnRlci1jYyIsImFjciI6IjEiLCJhbGxvd2VkLW9yaWdpbnMiOlsiLyoiXSwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbIkxPQU5TIiwiZGVmYXVsdC1yb2xlcy1tYXN0ZXIiLCJBQ0NPVU5UUyIsIm9mZmxpbmVfYWNjZXNzIiwidW1hX2F1dGhvcml6YXRpb24iLCJDQVJEUyJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFjY291bnQiOnsicm9sZXMiOlsibWFuYWdlLWFjY291bnQiLCJtYW5hZ2UtYWNjb3VudC1saW5rcyIsInZpZXctcHJvZmlsZSJdfX0sInNjb3BlIjoib3BlbmlkIGVtYWlsIHByb2ZpbGUiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsImNsaWVudEhvc3QiOiIxNzIuMTcuMC4xIiwicHJlZmVycmVkX3VzZXJuYW1lIjoic2VydmljZS1hY2NvdW50LXh5emJhbmstY2FsbGNlbnRlci1jYyIsImNsaWVudEFkZHJlc3MiOiIxNzIuMTcuMC4xIiwiY2xpZW50X2lkIjoieHl6YmFuay1jYWxsY2VudGVyLWNjIn0.tG-mWUmbCuXx_rXeie9EfhRRiH2kc1ZLm1kn-555SaT3B7v-GMSjFbA6bxypcq_NoiczWcXqM4I0w70FAJN1JN2-_qP49dQwtRXZXm3ibEo4miy2QwtUdAsEWVWHOxR6RfQvIkubxPJK94hT14OHq6eI-rnvmAiyGjc600PYQ863MFt2aUboEI17KoZr_irSh2mHIHfg20wyUy8YbpHXO-3DCQA6I3WELckUZzk8DOyiJdFZofgzQkTl3ku7Y6G3Jc4_mgAPqtfp9Y92UAbs3Pm4RsYWT7ijXPNS7mcTAUGvY8w5AbuE9V8zRJMVZhz2g2hhhWHuuPj0RentXCQN7g' \
+		--data-raw '{
+		    "name": "Dhandapani S",
+		    "email": "dhandapani.s@email.com",
+		    "mobileNumber": "4578905467"
+		}'
+
+		{
+		    "statusCode": "201 CREATED",
+		    "statusMessage": "Account created successfully"
+		}
+
+Logs of ms-accounts
+
+		[2m2026-01-18T18:24:51.866+05:30[0;39m [32m INFO [ms-accounts,,][0;39m [35m28372[0;39m [2m--- [ms-accounts] [ad | producer-1] [0;39m[36morg.apache.kafka.clients.Metadata       [0;39m [2m:[0;39m [Producer clientId=producer-1] Cluster ID: 5L6g3nShT-eMCtK--X86sw
+		[2m2026-01-18T18:24:51.884+05:30[0;39m [32m INFO [ms-accounts,,][0;39m [35m28372[0;39m [2m--- [ms-accounts] [nio-8080-exec-1] [0;39m[36mo.s.c.s.m.DirectWithAttributesChannel   [0;39m [2m:[0;39m Channel 'ms-accounts.sendCommunication-out-0' has 1 subscriber(s).
+		[2m2026-01-18T18:24:51.885+05:30[0;39m [32m INFO [ms-accounts,,][0;39m [35m28372[0;39m [2m--- [ms-accounts] [nio-8080-exec-1] [0;39m[36mo.s.c.s.binder.kafka.KafkaBinderMetrics [0;39m [2m:[0;39m Try to shutdown the old scheduler with 1 threads
+		[2m2026-01-18T18:24:51.887+05:30[0;39m [33m WARN [ms-accounts,,][0;39m [35m28372[0;39m [2m--- [ms-accounts] [nio-8080-exec-1] [0;39m[36mi.m.core.instrument.MeterRegistry       [0;39m [2m:[0;39m This Gauge has been already registered (MeterId{name='spring.cloud.stream.binder.kafka.offset', tags=[tag(application=ms-accounts),tag(group=ms-accounts),tag(topic=processed-communication)]}), the registration will be ignored. Note that subsequent logs will be logged at debug level.
+		[2m2026-01-18T18:24:51.954+05:30[0;39m [32m INFO [ms-accounts,,][0;39m [35m28372[0;39m [2m--- [ms-accounts] [nio-8080-exec-1] [0;39m[36mc.d.m.service.impl.AccountServiceImpl   [0;39m [2m:[0;39m Is the communication request successfully triggered? true
+		[2m2026-01-18T18:24:51.954+05:30[0;39m [32m INFO [ms-accounts,,][0;39m [35m28372[0;39m [2m--- [ms-accounts] [nio-8080-exec-1] [0;39m[36mc.d.m.service.impl.AccountServiceImpl   [0;39m [2m:[0;39m Account created successfully at 2026-01-18T18:24:51.954570800
+		[2m2026-01-18T18:24:52.235+05:30[0;39m [32m INFO [ms-accounts,,][0;39m [35m28372[0;39m [2m--- [ms-accounts] [container-0-C-1] [0;39m[36mc.d.m.functions.AccountsFunctions       [0;39m [2m:[0;39m Updating communication status for account number: 1328409986
+		Hibernate: select a1_0.account_number,a1_0.account_type,a1_0.branch_addres,a1_0.communication_switch,a1_0.created_at,a1_0.created_by,a1_0.customer_id,a1_0.updated_at,a1_0.updated_by from accounts a1_0 where a1_0.account_number=?
+		Hibernate: select a1_0.account_number,a1_0.account_type,a1_0.branch_addres,a1_0.communication_switch,a1_0.created_at,a1_0.created_by,a1_0.customer_id,a1_0.updated_at,a1_0.updated_by from accounts a1_0 where a1_0.account_number=?
+		Hibernate: update accounts set account_type=?,branch_addres=?,communication_switch=?,customer_id=?,updated_at=?,updated_by=? where account_number=?
+
+Logs of ms-message:
+
+		[2m2026-01-18T18:24:03.396+05:30[0;39m [32m INFO[0;39m [35m13676[0;39m [2m--- [ms-message] [container-0-C-1] [0;39m[36mo.s.c.s.b.k.KafkaMessageChannelBinder$2 [0;39m [2m:[0;39m ms-message: partitions assigned: [send-communication-0]
+		[2m2026-01-18T18:24:52.161+05:30[0;39m [32m INFO[0;39m [35m13676[0;39m [2m--- [ms-message] [container-0-C-1] [0;39m[36mc.d.m.functions.MessageFunctions        [0;39m [2m:[0;39m Sending Email with the details: AccountsMessageDto[accountNumber=1328409986, name=Dhandapani S, email=dhandapani.s@email.com, mobileNumber=4578905467]
+		[2m2026-01-18T18:24:52.164+05:30[0;39m [32m INFO[0;39m [35m13676[0;39m [2m--- [ms-message] [container-0-C-1] [0;39m[36mc.d.m.functions.MessageFunctions        [0;39m [2m:[0;39m Sending SMS with the details: AccountsMessageDto[accountNumber=1328409986, name=Dhandapani S, email=dhandapani.s@email.com, mobileNumber=4578905467]
+
+>>> Demo of Asynchronous Communication or Event Streaming using Docker Containers and Docker Compose
+
+Step 1: Generate Docker Images for the services and push it to Docker Hub
+
+PS D:\STS_WS\Event-Driven-Microservices-Using-Kafka\ms-config-server> mvn compile jib:dockerBuild
+PS D:\STS_WS\Event-Driven-Microservices-Using-Kafka\ms-eurekaserver> mvn compile jib:dockerBuild
+PS D:\STS_WS\Event-Driven-Microservices-Using-Kafka\ms-loans> mvn compile jib:dockerBuild
+PS D:\STS_WS\Event-Driven-Microservices-Using-Kafka\ms-cards> mvn compile jib:dockerBuild
+PS D:\STS_WS\Event-Driven-Microservices-Using-Kafka\ms-accounts> mvn compile jib:dockerBuild
+PS D:\STS_WS\Event-Driven-Microservices-Using-Kafka\ms-gateway-server> mvn compile jib:dockerBuild
+PS D:\STS_WS\Event-Driven-Microservices-Using-Kafka\ms-message> mvn compile jib:dockerBuild
+
+docker push docker.io/dhandapaniks/ms-config-server:0.0.9
+docker push docker.io/dhandapaniks/ms-eurekaserver:0.0.9
+docker push docker.io/dhandapaniks/ms-accounts:0.0.9
+docker push docker.io/dhandapaniks/ms-cards:0.0.9
+docker push docker.io/dhandapaniks/ms-loans:0.0.9
+docker push docker.io/dhandapaniks/ms-gateway-server:0.0.9
+docker push docker.io/dhandapaniks/ms-message:0.0.9
+
+Step 2: Updates to docker-compose file
+
+Replace image version 0.0.8 with 0.0.9 for services ms-accounts, ms-cards, ms-loans, ms-message, ms-config-server, ms-eurekaserver, and ms-gateway-server
+
+Remove the 'rabbitmq' service and its related configuration from other services
+
+Add a new service named 'kafka'
+
+Ref: http://developer.confluent.io/confluent-tutorials/kafka-on-docker/?utm_medium=sem&utm_source=google&utm_campaign=ch.sem_br.nonbrand_tp.prs_tgt.dsa_mt.dsa_rgn.apac_sbrgn.india_lng.eng_dv.all_con.confluent-developer&utm_term=&creative=&device=c&placement=&gad_source=1&gad_campaignid=19560855030&gbraid=0AAAAADRv2c3cHESCKVlCRveGsCOyPcmo-&gclid=Cj0KCQiAprLLBhCMARIsAEDhdPcS2pDcrv_162Ngmc9_5VliWfhf4F-8V9T5VN3ZdE8LT0f9JVAdhIwaAneREALw_wcB
+
+- We have copied kafka service configuration from the above web page and just changed the service name. 
+- Please make sure you do not change the values for the environment variable 'KAFKA_PROCESS_ROLES'. 
+- Since we have updated the service name to kafka, updated the service name in the configuration wherever 'service_name:port' name configuration is used.
+- Additionally, we have included healthcheck details.
+
+Updates to ms-accounts
+
+- Update 'depends_on' as it is depending on the 'kafka' service
+- Add new environment variable with value SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS: "kafka:9092"
+
+Updates to ms-message
+
+- Update 'depends_on' as it is depending on the 'kafka' service
+- Add new environment variable with value SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS: "kafka:9092"
+
+Step 3: Start the services by running the following Docker command
+
+D:\STS_WS\Event-Driven-Microservices-Using-Kafka\docker-compose\prod> docker compose up -d
+
+Once the services are started, in KeyCloak set up Client, Credentials, and required Roles.
+
+Step 4: In KeyCloak, create a client and get the ID and Secret
+
+Access Keycloak at http://127.0.0.1:8050/ and use admin:admin as the credential
+
+After logging in, go to Client -> Create client -> Give name 'xyzbank-callcenter-cc'
+
+For Name and Description, give 'XYZ Bank Call Center App' and click on Next
+
+Enable 'Client authentication'
+
+In 'Authentication flow', select only 'Service account roles'
+
+Do not give any values for 'Root URL' and 'Home URL' and click on 'Save'
+
+Go to the 'Credentials' section and copy 'Client ID' and 'Cliect Secret'
+
+Client ID: xyzbank-callcenter-cc
+Client Secret: qsmnDcLWBeyhUemeHY7FeLu8ocuuJGd9
+
+Step 4.1: Create ACCOUNTS, CARDS, and LOANS roles under Realm roles
+
+Click on 'Realm roles' and 'Create role'
+
+Create 3 roles named ACCOUNTS, CARDS, and LOANS
+
+Step 4.2: Assing the created roles to client 'xyzbank-callcenter-cc'
+
+Go to 'Clients', select 'xyzbank-callcenter-cc' and click on 'Service account roles' tab
+
+Now click on 'Assign role (Realm roles)'
+
+Select ACCOUNTS, CARDS, and LOANS and clieck on 'Assign'
+
+Now the roles have been assigned to the client 'xyzbank-callcenter-c'
+
+Step 5: Test Create Account API with Auth (Client Credentials Grant Type)
+
+	curl --location 'http://localhost:8072/xyzbank/ms-accounts/api/accounts/create' \
+	--header 'Content-Type: application/json' \
+	--header 'Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJscGFCangyZjVIb1paSFdZczZkenp0eVJGOXhBMFgwV3ljVmFCTHdhZVE4In0.eyJleHAiOjE3Njg4MDQzOTQsImlhdCI6MTc2ODgwNDMzNCwianRpIjoidHJydGNjOmNjYTViZWIyLWExM2MtNzkwOC1kNDI5LTRkYmIzMzFiOTNlYSIsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6ODA1MC9yZWFsbXMvbWFzdGVyIiwiYXVkIjoiYWNjb3VudCIsInN1YiI6Ijg2Yzc2OGUwLTcwOGQtNDkxZS04MjQ4LWI2NWRiNmM3NmZlMiIsInR5cCI6IkJlYXJlciIsImF6cCI6Inh5emJhbmstY2FsbGNlbnRlci1jYyIsImFjciI6IjEiLCJhbGxvd2VkLW9yaWdpbnMiOlsiLyoiXSwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbIkxPQU5TIiwiZGVmYXVsdC1yb2xlcy1tYXN0ZXIiLCJBQ0NPVU5UUyIsIm9mZmxpbmVfYWNjZXNzIiwidW1hX2F1dGhvcml6YXRpb24iLCJDQVJEUyJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFjY291bnQiOnsicm9sZXMiOlsibWFuYWdlLWFjY291bnQiLCJtYW5hZ2UtYWNjb3VudC1saW5rcyIsInZpZXctcHJvZmlsZSJdfX0sInNjb3BlIjoib3BlbmlkIGVtYWlsIHByb2ZpbGUiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsImNsaWVudEhvc3QiOiIxNzIuMTguMC4xIiwicHJlZmVycmVkX3VzZXJuYW1lIjoic2VydmljZS1hY2NvdW50LXh5emJhbmstY2FsbGNlbnRlci1jYyIsImNsaWVudEFkZHJlc3MiOiIxNzIuMTguMC4xIiwiY2xpZW50X2lkIjoieHl6YmFuay1jYWxsY2VudGVyLWNjIn0.trtOq_e0z7GFNm6G0swm962fCv3ZQYt_n9gdnnxl-1e9UPJu1YveG9lMu4qr_JJcsBCT-tRCRqXH9PswPVcTvYJ5pKuVQUCIGMTOAPv_-r0a412pKgWPJsAjT1EsSHUNb6kosDyXyyZ_ysskK7AAWxlV3scT7r1Y5yOPE3MyL7JR0mRp8Qjyo0sHM2uPP97eDQHCI2xUGc3xMshplJaApSJnu75sEfvPqqLqR5Jz_9SYECeKm9ZT8XNhzHDxo3E6PtNT8_vNE80A7wqwGYr9AmmGHmoJmo6O7oRCI65JOe1qyEZQOQKtWNFZbhpF28ZMkqudL4xfFxpVUzMNvvJQoQ' \
+	--data-raw '{
+	    "name": "Dhandapani S",
+	    "email": "dhandapani.s@email.com",
+	    "mobileNumber": "4578905467"
+	}'
+
+	{
+	    "statusCode": "201 CREATED",
+	    "statusMessage": "Account created successfully"
+	}
+
+Logs of ms-accounts:
+
+		2026-01-19T06:32:15.900Z  INFO [ms-accounts,6dc9b1ef769bb6f2ef1143b26064efc8,03c8a54e7dd4dfaa] 1 --- [ms-accounts] [io-8080-exec-10] o.a.k.c.t.i.KafkaMetricsCollector        : initializing Kafka metrics collector
+
+		2026-01-19T06:32:15.925Z  INFO [ms-accounts,6dc9b1ef769bb6f2ef1143b26064efc8,03c8a54e7dd4dfaa] 1 --- [ms-accounts] [io-8080-exec-10] o.a.kafka.common.utils.AppInfoParser     : Kafka version: 4.1.1
+
+		2026-01-19T06:32:15.926Z  INFO [ms-accounts,6dc9b1ef769bb6f2ef1143b26064efc8,03c8a54e7dd4dfaa] 1 --- [ms-accounts] [io-8080-exec-10] o.a.kafka.common.utils.AppInfoParser     : Kafka commitId: be816b82d25370ce
+
+		2026-01-19T06:32:15.926Z  INFO [ms-accounts,6dc9b1ef769bb6f2ef1143b26064efc8,03c8a54e7dd4dfaa] 1 --- [ms-accounts] [io-8080-exec-10] o.a.kafka.common.utils.AppInfoParser     : Kafka startTimeMs: 1768804335925
+
+		2026-01-19T06:32:15.931Z  INFO [ms-accounts,,] 1 --- [ms-accounts] [ad | producer-1] org.apache.kafka.clients.Metadata        : [Producer clientId=producer-1] Cluster ID: MkU3OEVBNTcwNTJENDM2Qk
+
+		2026-01-19T06:32:15.948Z  INFO [ms-accounts,6dc9b1ef769bb6f2ef1143b26064efc8,03c8a54e7dd4dfaa] 1 --- [ms-accounts] [io-8080-exec-10] o.s.c.s.m.DirectWithAttributesChannel    : Channel 'ms-accounts.sendCommunication-out-0' has 1 subscriber(s).
+
+		2026-01-19T06:32:15.949Z  INFO [ms-accounts,6dc9b1ef769bb6f2ef1143b26064efc8,03c8a54e7dd4dfaa] 1 --- [ms-accounts] [io-8080-exec-10] o.s.c.s.binder.kafka.KafkaBinderMetrics  : Try to shutdown the old scheduler with 1 threads
+
+		2026-01-19T06:32:15.951Z  WARN [ms-accounts,6dc9b1ef769bb6f2ef1143b26064efc8,03c8a54e7dd4dfaa] 1 --- [ms-accounts] [io-8080-exec-10] i.m.core.instrument.MeterRegistry        : This Gauge has been already registered (MeterId{name='spring.cloud.stream.binder.kafka.offset', tags=[tag(application=ms-accounts),tag(group=ms-accounts),tag(topic=processed-communication)]}), the registration will be ignored. Note that subsequent logs will be logged at debug level.
+
+		2026-01-19T06:32:15.993Z  INFO [ms-accounts,6dc9b1ef769bb6f2ef1143b26064efc8,03c8a54e7dd4dfaa] 1 --- [ms-accounts] [io-8080-exec-10] c.d.m.service.impl.AccountServiceImpl    : Is the communication request successfully triggered? true
+
+		2026-01-19T06:32:15.993Z  INFO [ms-accounts,6dc9b1ef769bb6f2ef1143b26064efc8,03c8a54e7dd4dfaa] 1 --- [ms-accounts] [io-8080-exec-10] c.d.m.service.impl.AccountServiceImpl    : Account created successfully at 2026-01-19T06:32:15.993670197
+
+		2026-01-19T06:32:16.552Z  INFO [ms-accounts,6dc9b1ef769bb6f2ef1143b26064efc8,fda2620aefbfe9e2] 1 --- [ms-accounts] [container-0-C-1] c.d.m.functions.AccountsFunctions        : Updating communication status for account number: 1565018334
+
+		Hibernate: select a1_0.account_number,a1_0.account_type,a1_0.branch_addres,a1_0.communication_switch,a1_0.created_at,a1_0.created_by,a1_0.customer_id,a1_0.updated_at,a1_0.updated_by from accounts a1_0 where a1_0.account_number=?
+
+		Hibernate: select a1_0.account_number,a1_0.account_type,a1_0.branch_addres,a1_0.communication_switch,a1_0.created_at,a1_0.created_by,a1_0.customer_id,a1_0.updated_at,a1_0.updated_by from accounts a1_0 where a1_0.account_number=?
+
+		Hibernate: update accounts set account_type=?,branch_addres=?,communication_switch=?,customer_id=?,updated_at=?,updated_by=? where account_number=?
+
+Logs of ms-message:
+
+		2026-01-19T06:32:16.451Z  INFO 1 --- [ms-message] [container-0-C-1] c.d.m.functions.MessageFunctions         : Sending Email with the details: AccountsMessageDto[accountNumber=1565018334, name=Dhandapani S, email=dhandapani.s@email.com, mobileNumber=4578905467]
+
+		2026-01-19T06:32:16.459Z  INFO 1 --- [ms-message] [container-0-C-1] c.d.m.functions.MessageFunctions         : Sending SMS with the details: AccountsMessageDto[accountNumber=1565018334, name=Dhandapani S, email=dhandapani.s@email.com, mobileNumber=4578905467]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
