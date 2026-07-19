@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ms-accounts-deployment
+  labels:
+    app: ms-accounts
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ms-accounts
+  template:
+    metadata:
+      labels:
+        app: ms-accounts
+    spec:
+      containers:
+      - name: ms-accounts
+        image: dhandapaniks/ms-accounts:0.0.7
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SPRING_APPLICATION_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: xyzbank-configmap
+              key: ACCOUNTS_APPLICATION_NAME
+        - name: SPRING_PROFILES_ACTIVE
+          valueFrom:
+            configMapKeyRef:
+              name: xyzbank-configmap
+              key: SPRING_PROFILES_ACTIVE
+        - name: SPRING_CONFIG_IMPORT
+          valueFrom:
+            configMapKeyRef:
+              name: xyzbank-configmap
+              key: SPRING_CONFIG_IMPORT
+        - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE # We need this because our ms-accounts has to register itself with the Eureka Server
+          valueFrom:
+            configMapKeyRef:
+              name: xyzbank-configmap
+              key: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ms-accounts
+spec:
+  selector:
+    app: ms-accounts
+  type: LoadBalancer
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+            

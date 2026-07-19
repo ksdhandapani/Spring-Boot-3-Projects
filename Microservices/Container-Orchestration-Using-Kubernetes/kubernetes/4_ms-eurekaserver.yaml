@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ms-eurekaserver-deployment
+  labels:
+    app: ms-eurekaserver
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ms-eurekaserver
+  template:
+    metadata:
+      labels:
+        app: ms-eurekaserver
+    spec:
+      containers:
+      - name: ms-eurekaserver
+        image: dhandapaniks/ms-eurekaserver:0.0.7
+        ports:
+        - containerPort: 8070
+        env:
+        - name: SPRING_APPLICATION_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: xyzbank-configmap
+              key: EUREKASERVER_APPLICATION_NAME
+        - name: SPRING_CONFIG_IMPORT
+          valueFrom:
+            configMapKeyRef:
+              name: xyzbank-configmap
+              key: SPRING_CONFIG_IMPORT
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ms-eurekaserver
+spec:
+  selector:
+    app: ms-eurekaserver
+  type: LoadBalancer
+  ports:
+    - protocol: TCP
+      port: 8070
+      targetPort: 8070
+            

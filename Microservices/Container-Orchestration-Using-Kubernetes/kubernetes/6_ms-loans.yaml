@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ms-loans-deployment
+  labels:
+    app: ms-loans
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ms-loans
+  template:
+    metadata:
+      labels:
+        app: ms-loans
+    spec:
+      containers:
+      - name: ms-loans
+        image: dhandapaniks/ms-loans:0.0.7
+        ports:
+        - containerPort: 8090
+        env:
+        - name: SPRING_APPLICATION_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: xyzbank-configmap
+              key: LOANS_APPLICATION_NAME
+        - name: SPRING_PROFILES_ACTIVE
+          valueFrom:
+            configMapKeyRef:
+              name: xyzbank-configmap
+              key: SPRING_PROFILES_ACTIVE
+        - name: SPRING_CONFIG_IMPORT
+          valueFrom:
+            configMapKeyRef:
+              name: xyzbank-configmap
+              key: SPRING_CONFIG_IMPORT
+        - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE # We need this because our ms-loans has to register itself with the Eureka Server
+          valueFrom:
+            configMapKeyRef:
+              name: xyzbank-configmap
+              key: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ms-loans
+spec:
+  selector:
+    app: ms-loans
+  type: LoadBalancer
+  ports:
+    - protocol: TCP
+      port: 8090
+      targetPort: 8090
+            

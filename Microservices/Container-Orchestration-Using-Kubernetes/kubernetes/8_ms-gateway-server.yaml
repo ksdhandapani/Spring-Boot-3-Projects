@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ms-gateway-server-deployment
+  labels:
+    app: ms-gateway-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ms-gateway-server
+  template:
+    metadata:
+      labels:
+        app: ms-gateway-server
+    spec:
+      containers:
+      - name: ms-gateway-server
+        image: dhandapaniks/ms-gateway-server:0.0.7
+        ports:
+        - containerPort: 8072
+        env:
+        - name: SPRING_APPLICATION_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: xyzbank-configmap
+              key: GATEWAY_SERVER_APPLICATION_NAME
+        - name: SPRING_PROFILES_ACTIVE
+          valueFrom:
+            configMapKeyRef:
+              name: xyzbank-configmap
+              key: SPRING_PROFILES_ACTIVE
+        - name: SPRING_CONFIG_IMPORT
+          valueFrom:
+            configMapKeyRef:
+              name: xyzbank-configmap
+              key: SPRING_CONFIG_IMPORT
+        - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE # We need this because our ms-gateway-server has to register itself with the Eureka Server
+          valueFrom:
+            configMapKeyRef:
+              name: xyzbank-configmap
+              key: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+        - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK-SET-URI
+          valueFrom: 
+            configMapKeyRef:
+              name: xyzbank-configmap
+              key: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK-SET-URI # The KeyCloak server URL where our resource server has to fetch the certificate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ms-gateway-server
+spec:
+  selector:
+    app: ms-gateway-server
+  type: LoadBalancer
+  ports:
+    - protocol: TCP
+      port: 8072
+      targetPort: 8072
+            

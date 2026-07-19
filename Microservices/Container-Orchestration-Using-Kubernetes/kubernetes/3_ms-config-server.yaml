@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ms-config-server-deployment
+  labels:
+    app: ms-config-server
+spec:
+  replicas: 1 # If we specify three, our Kubernetes Cluster will deploy our config server across different parts with three separate instances.
+  selector:
+    matchLabels:
+      app: ms-config-server
+  template:
+    metadata:
+      labels:
+        app: ms-config-server
+    spec:
+      containers: # We specified a list element with a hyphen (-) under the containers, indicating a single container for our Kubernetes deployment. This will create a pod with one container on a worker node. If our ms-config-server container requires a helper container, we need to repeat the container instructions as a new list element under 'containers'.
+      - name: ms-config-server
+        image: dhandapaniks/ms-config-server:0.0.7
+        ports:
+        - containerPort: 8071
+---
+# The three hyphens between the Deployment and Service configurations in a YAML file indicate that the file should be treated as two separate YAML files.
+apiVersion: v1
+kind: Service # To expose our ms-config-server in a Kubernetes cluster or restrict it for internal use, we need to create a 'Service' to control its external communication.
+metadata:
+  name: ms-config-server
+spec:
+  selector:
+    app: ms-config-server
+  type: LoadBalancer
+  ports:
+    - protocol: TCP
+      port: 8071
+      targetPort: 8071
+  

@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: xyzbank-configmap
+data:
+  SPRING_PROFILES_ACTIVE: prod
+  SPRING_CONFIG_IMPORT: "configserver:http://ms-config-server:8071/" # Location of the Config Server
+  EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://ms-eurekaserver:8070/eureka/"
+  CONFIG_SERVER_APPLICATION_NAME: "ms-config-server"
+  EUREKASERVER_APPLICATION_NAME: "ms-eurekaserver"
+  GATEWAY_SERVER_APPLICATION_NAME: "ms-gateway-server"
+  ACCOUNTS_APPLICATION_NAME: "ms-accounts"
+  LOANS_APPLICATION_NAME: "ms-loans"
+  CARDS_APPLICATION_NAME: "ms-cards"
+  KC_BOOTSTRAP_ADMIN_USERNAME: "admin"
+  KC_BOOTSTRAP_ADMIN_PASSWORD: "admin"
+  SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK-SET-URI: "http://keycloak:8050/realms/master/protocol/openid-connect/certs" # With this path, we are telling our Gateway Server to validate the JWT tokens by using the public keys exposed by Keycloak server. The KeyCloak Server has Private Certificate or Key, using the private key only the KeyCloak issues the new tokens.
